@@ -160,7 +160,7 @@ def main():
     learning_rate = 5e-4
     num_hidden_units = 8
 
-    model = Transformer(num_sensors=len(features), hidden_units=num_hidden_units)
+    model = Transformer()
     loss_function = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     print("Untrained test\n--------")
