@@ -31,16 +31,19 @@ def main():
     # group_data_frames_threaded(12)
     # remove_small_files("sortedGroupedJobFiles")
     # We should not have 2261 job files left that have been preprocessed, sorted and filtered
-    add_scheduling_class()
-    #correlation()
+    # add_scheduling_class()
+    correlation()
+
 
 @delayed
 def delayed_dataframe_calculation(sum_heatmap):
     for filename in os.listdir("sortedGroupedJobFiles/"):
         filepath = os.path.join("sortedGroupedJobFiles/", filename)
         if os.path.isfile(filepath) and "sortedGroupedJobFiles" in filepath:
-            data_frame = pd.read_csv(filepath)
+            data_frame = dd.read_csv(filepath)
+
             heatmap = data_frame.corr(method='pearson')
+            heatmap = heatmap.fillna(0)
             if sum_heatmap is None:
                 # If this is the first heatmap, initialize the sum_heatmap array
                 sum_heatmap = heatmap
@@ -49,18 +52,20 @@ def delayed_dataframe_calculation(sum_heatmap):
                 sum_heatmap += heatmap
     return sum_heatmap
 
+
 # Step 4 - see what columns are relevant and should be kept
 def correlation():
     sum_heatmap = None
     sum_heatmap = delayed_dataframe_calculation(sum_heatmap)
-    sum_heatmap=sum_heatmap.compute()
+    sum_heatmap = sum_heatmap.compute()
     sns.set(font_scale=1)
     num_heatmaps = len(os.listdir("sortedGroupedJobFiles/"))
-    print(num_heatmaps)
     avg_heatmap = np.divide(sum_heatmap, num_heatmaps)
-    fig, ax = plt.subplots(figsize=(16, 12))
+    # filtered_heatmap = avg_heatmap.where(np.abs(avg_heatmap) >= 0.0)  # filter by threshold of 0.5
+    fig, ax = plt.subplots(figsize=(20, 16))
     plt.subplots_adjust(left=0.25, bottom=0.3)
-    sns.heatmap(avg_heatmap, annot=True, cmap="coolwarm", ax=ax)
+    sns.heatmap(avg_heatmap, annot=True, cmap="coolwarm", ax=ax, xticklabels=sum_heatmap, yticklabels=sum_heatmap)
+    # plt.show()
     plt.savefig('heatmap.png')
 
 
@@ -68,11 +73,12 @@ def correlation():
 def add_scheduling_class():
     data_frame = pd.read_csv(jobs_file, sep=" ")
     for index, row in data_frame.iterrows():
-        file_path = os.path.join("sortedGroupedJobFiles/" + str(row[0])+".csv")
+        file_path = os.path.join("sortedGroupedJobFiles/" + str(row[0]) + ".csv")
         if os.path.isfile(file_path):
-            df = dd.read_csv("sortedGroupedJobFiles/" + str(row[0])+".csv", blocksize=256e6)
+            df = dd.read_csv("sortedGroupedJobFiles/" + str(row[0]) + ".csv", blocksize=256e6)
             df['scheduling_class'] = row[1]
-            df.to_csv("sortedGroupedJobFiles/" + str(row[0])+".csv", index=False)
+            df.to_csv("sortedGroupedJobFiles/" + str(row[0]) + ".csv", index=False)
+
 
 # Step 3.5
 @delayed

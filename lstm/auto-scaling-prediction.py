@@ -5,6 +5,16 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 
+# hyperparameters
+# for each training instance, we’re going to give the model a sequence of observations.
+# dataset = [1,2,3,4], in sequence set 2 I would have training X:[1,2],[3,4] Y:[2],[4]
+sequence_length = 1
+batch_size = 2  # batch_size - number of samples we want to pass into the training loop at each iteration
+learning_rate = 5e-3
+num_hidden_units = 10  # The size of your LSTM layers, or the number of hidden units in each layer, will affect the capacity of your model. A larger number of hidden units will allow the model to capture more complex patterns in the data, but may also make the model more prone to overfitting.
+epochs = 10
+num_layers = 8
+
 
 # source: https://www.crosstab.io/articles/time-series-pytorch-lstm/
 # This custom Dataset specifies what happens when somebody requests the i’th element of the dataset. In a tabular dataset, this would be the i’th row of the table, but here we need to retrieve a sequence of rows
@@ -36,19 +46,24 @@ class RegressionLSTM(nn.Module):
         super().__init__()
         self.num_sensors = num_sensors  # this is the number of features
         self.hidden_units = hidden_units
-        self.num_layers = 8
+        self.num_layers = num_layers
 
         self.lstm = nn.LSTM(
-            input_size=num_sensors,
-            hidden_size=hidden_units,
+            input_size=num_sensors,  # the number of expected features in the input x
+            hidden_size=hidden_units,  # The number of features in the hidden state h
             batch_first=True,
+            # If True, then the input and output tensors are provided as (batch, seq, feature) instead of (seq, batch, feature)
+            # bidirectional=True,
             num_layers=self.num_layers
+            # Number of recurrent layers. E.g., setting num_layers=2 would mean stacking two LSTMs together to form a stacked LSTM, with the second LSTM taking in outputs of the first LSTM and computing the final results.
         )
         self.linear = nn.Linear(in_features=self.hidden_units, out_features=2)
 
     def forward(self, x):
-        batch_size = x.shape[0]
+        batch_size = x.shape[
+            0]  # x is the tensor I get from the training, batchsize[sequence size[nr of input elements]]
         # a tensor containing the initial hidden state for each element in the batch, of shape (batch, hidden_size).
+        # tensor with batchsize[sequence size[nr of hidden units]]
         h0 = torch.zeros(self.num_layers, batch_size, self.hidden_units).requires_grad_()
         # a tensor containing the initial cell state for each element in the batch, of shape (batch, hidden_size).
         c0 = torch.zeros(self.num_layers, batch_size, self.hidden_units).requires_grad_()
@@ -57,23 +72,54 @@ class RegressionLSTM(nn.Module):
         return out
 
 
-def my_loss_fn(output1, output2, target1, target2):
-    loss1 = nn.functional.mse_loss(output1, target1)
-    loss2 = nn.functional.mse_loss(output2, target2)
-    return loss1 + loss2
+def mse(prediction, real_value, size):
+    mse = nn.MSELoss()
+    MSE = mse(prediction, real_value)
+    return MSE
 
 
-def train_model(data_loader, model, loss_function, optimizer):
-    num_batches = len(data_loader)
+def naive_ratio(prediction, real_value, size):
+    prediction_et1 = prediction[1:]  # - shift to the right by one index - remove first element
+    real_value_et1 = real_value[:-1]  # remove last element
+    # Compute the absolute difference between corresponding elements of a and b
+    abs_diff_et1 = torch.abs(prediction_et1 - real_value_et1)
+    # Compute the sum of the absolute differences
+    sum_abs_diff_et1 = torch.sum(abs_diff_et1)
+    et1 = (1 / size) * sum_abs_diff_et1
+    abs_diff = torch.abs(prediction - real_value)
+    # Compute the sum of the absolute differences
+    sum_abs_diff = torch.sum(abs_diff)
+    et = (1 / size) * sum_abs_diff
+    return et / et1
+
+
+def my_loss_fn(output, target1, target2, size):
+    loss = 0
+    loss += mse(output[:, 0], target1, size)
+    loss += mse(output[:, 1], target2, size)
+    loss += naive_ratio(output[:, 0], target1, size)
+    loss += naive_ratio(output[:, 1], target2, size)
+    return loss
+
+
+def train_model(data_loader, model, optimizer):
+    num_batches = len(data_loader)  # trainingdata/batches
+    print("TRAINING")
+    print(num_batches)
     total_loss = 0
     model.train()
 
     for X, y in data_loader:
-        optimizer.zero_grad()
-        output1, output2 = model(X)
-        loss = my_loss_fn(output1, output2, y[:, 0], y[:, 1])
-        loss.backward()
-        optimizer.step()
+        # X has the shape of an array the size number of batches that has sequences inside of sequence length
+        # Y has the batch size, but only one value inside - sequence length =1
+        print(X)
+        print(y)
+        optimizer.zero_grad()  # sets gradients back to zero
+        output = model(X)
+        print(output)
+        loss = my_loss_fn(output, y[:, 0], y[:, 1], num_batches)
+        loss.backward()  # gradients computed
+        optimizer.step()  # to proceed gradient descent
 
         total_loss += loss.item()
 
@@ -81,30 +127,25 @@ def train_model(data_loader, model, loss_function, optimizer):
     print(f"Train loss: {avg_loss}")
 
 
-def test_model(data_loader, model, loss_function):
+def test_model(data_loader, model):
     num_batches = len(data_loader)
-    total_loss_cpu = 0
-    total_loss_mem = 0
-
     model.eval()
     with torch.no_grad():
         for X, y in data_loader:
-            for i in range(y.shape[1]):
-                column_values = y[:, i]  # Use slicing to get the values in the column
-                output = model(X)
-                if i == 1:
-                    total_loss_mem += loss_function(output, column_values).item()
-                else:
-                    total_loss_cpu += loss_function(output, column_values).item()
-
-    print(f"Test loss mem: {total_loss_mem / num_batches}")
-    print(f"Test loss cpu: {total_loss_cpu / num_batches}")
-    print(f"Total test loss: {(total_loss_cpu + total_loss_mem) / num_batches}")
+            output = model(X)
+            loss = my_loss_fn(output, y[:, 0], y[:, 1], num_batches)
+    print(f"Total test loss: {(loss) / num_batches}")
 
 
 def predict(data_loader, model):
     output = torch.tensor([])
     model.eval()
+    # Use the last n inputs from the training data as initial input sequence
+    # input_seq = x_train[:, -n:, :]
+    # Generate predictions for the next m timestamps
+    # for i in range(m):
+    # output = model(input_seq)
+    # input_seq = torch.cat([input_seq[:, 1:, :], output.unsqueeze(1)], dim=1)
     with torch.no_grad():
         for X, _ in data_loader:
             y_star = model(X)
@@ -118,47 +159,37 @@ def calc_MSE_Accuracy(y_test, y_test_pred):
     print("Median absolute error =", round(sm.median_absolute_error(y_test, y_test_pred), 2))
     print("Explain variance score =", round(sm.explained_variance_score(y_test, y_test_pred), 2))
     print("R2 score =", round(sm.r2_score(y_test, y_test_pred), 2))
-    length = len(y_test.values)
-    nr_sum_t1 = 0
-    for i in range(length - 1):
-        nr_sum_t1 += y_test_pred[i + 1] - y_test[i]
-    nr_sum_t1 = nr_sum_t1 / (length - 1)
-    nr_sum_t = 0
-    for i in range(length - 2):
-        nr_sum_t += y_test_pred[i + 1] - y_test[i]
-    nr_sum_t = nr_sum_t / (length - 2)
-    print(nr_sum_t1)
-    print(nr_sum_t)
-    print("Naive ratio")
-    print(nr_sum_t / nr_sum_t1)
+
+    nr = naive_ratio(torch.tensor(y_test_pred.values), torch.tensor(y_test.values), len(y_test.values))
+    print("Naive ratio =", nr)
 
 
 def main():
-    df = pd.read_csv("job_3418339.csv", sep=",")
+    # df = pd.read_csv("job_3418339.csv", sep=",")
+    df = pd.read_csv("j.csv", sep=",")
     data = df
 
     # split into training and test set - check until what index the training data is
-    test_head = data.index[int(0.8 * len(data))]
-    df_train = df.loc[:test_head - 1, :]
-    df_test = df.loc[test_head:, :]
-
-    features = ['start_time','mean_cpu_usage', 'mean_disk_io_time', 'canonical_mem_usage']
+    # test_head = data.index[int(0.8 * len(data))]
+    df_train = df.loc[:8 - 1, :]
+    df_test = df.loc[8:10, :]
+    print(len(df_train))
+    print(len(df_test))
+    features = ['start_time', 'mean_cpu_usage', 'mean_disk_io_time', 'canonical_mem_usage']
     target = ["mean_cpu_usage", 'canonical_mem_usage']
     means = {}
     stdevs = {}
-
+    # normalize data: The short answer is — it dramatically improves model accuracy. Normalization gives equal weights/importance to each variable so that no single variable steers model performance in one direction just because they are bigger numbers
     for c in df_train.columns:
-        mean = df_train[c].mean()
-        stdev = df_train[c].std()
-        means[c] = mean
-        stdevs[c] = stdev
-        df_train[c] = (df_train[c] - mean) / stdev
-        df_test[c] = (df_test[c] - mean) / stdev
-
-    batch_size = 2
-    sequence_length = 4
+        mean_train = df_train[c].mean()
+        stdev_train = df_train[c].std()
+        means[c] = mean_train
+        stdevs[c] = stdev_train
+        df_train.loc[:, c] = (df_train.loc[:, c] - mean_train) / stdev_train
+        df_test.loc[:, c] = (df_test.loc[:, c] - mean_train) / stdev_train
 
     # Create datasets that PyTorch DataLoader can work with
+    print(df_train)
     train_dataset = SequenceDataset(
         df_train,
         target=target,
@@ -172,34 +203,32 @@ def main():
         sequence_length=sequence_length
     )
 
+    # this will have the size batch_size x sequence_length x number_of_features
+    # For training, we’ll shuffle the data (the rows within each data sequence are not shuffled, only the order in which we draw the blocks).
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    learning_rate = 5e-4
-    num_hidden_units = 8
-
     model = RegressionLSTM(num_sensors=len(features), hidden_units=num_hidden_units)
-    loss_function = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     print("Untrained test\n--------")
-    test_model(test_loader, model, loss_function)
+    test_model(test_loader, model)
 
-    for ix_epoch in range(5):
+    for ix_epoch in range(epochs):
         print(f"Epoch {ix_epoch}\n---------")
-        train_model(train_loader, model, loss_function, optimizer=optimizer)
-        test_model(test_loader, model, loss_function)
+        train_model(train_loader, model, optimizer=optimizer)
+        test_model(test_loader, model)
         print()
 
     train_eval_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
     prediction_train = predict(train_eval_loader, model).numpy()
     prediction_test = predict(test_loader, model).numpy()
+
     df_train.insert(2, "forecast_cpu", prediction_train[:, 0], True)
     df_train.insert(2, "forecast_mem", prediction_train[:, 1], True)
     df_test.insert(2, "forecast_cpu", prediction_test[:, 0], True)
     df_test.insert(2, "forecast_mem", prediction_test[:, 1], True)
 
     df_out = pd.concat([df_train, df_test])
-
     for c in df_out.columns:
         if c == 'forecast_cpu':
             target_stdev = stdevs["mean_cpu_usage"]
@@ -218,7 +247,6 @@ def main():
     in_hours = in_minutes * 12  # each interval has 5 minutes
     in_days = in_hours * 24
     index_in_hours = ((df['start_time'] - 600000000) / in_hours)
-    print(df_out["forecast_cpu"])
     calc_MSE_Accuracy(df_out["mean_cpu_usage"], df_out["forecast_cpu"])
     calc_MSE_Accuracy(df_out["canonical_mem_usage"], df_out["forecast_mem"])
     plt.plot(index_in_hours, df_out["mean_cpu_usage"].values, label='actual CPU usage', linewidth=0.5)
