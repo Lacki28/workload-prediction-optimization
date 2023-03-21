@@ -8,12 +8,12 @@ from torch.utils.data import Dataset, DataLoader
 # hyperparameters
 # for each training instance, we’re going to give the model a sequence of observations.
 # dataset = [1,2,3,4], in sequence set 2 I would have training X:[1,2],[3,4] Y:[2],[4]
-sequence_length = 1
-batch_size = 2  # batch_size - number of samples we want to pass into the training loop at each iteration
-learning_rate = 5e-3
+sequence_length = 2
+batch_size = 5  # batch_size - number of samples we want to pass into the training loop at each iteration
+learning_rate = 5e-4
 num_hidden_units = 10  # The size of your LSTM layers, or the number of hidden units in each layer, will affect the capacity of your model. A larger number of hidden units will allow the model to capture more complex patterns in the data, but may also make the model more prone to overfitting.
-epochs = 10
-num_layers = 8
+num_layers = 10  # each layer consists of some hidden units
+epochs = 5
 
 
 # source: https://www.crosstab.io/articles/time-series-pytorch-lstm/
@@ -37,7 +37,6 @@ class SequenceDataset(Dataset):
             padding = self.X[0].repeat(self.sequence_length - i - 1, 1)
             x = self.X[0:(i + 1), :]
             x = torch.cat((padding, x), 0)
-
         return x, self.y[i]
 
 
@@ -47,7 +46,7 @@ class RegressionLSTM(nn.Module):
         self.num_sensors = num_sensors  # this is the number of features
         self.hidden_units = hidden_units
         self.num_layers = num_layers
-
+        #self.bidirectional = True
         self.lstm = nn.LSTM(
             input_size=num_sensors,  # the number of expected features in the input x
             hidden_size=hidden_units,  # The number of features in the hidden state h
@@ -104,19 +103,14 @@ def my_loss_fn(output, target1, target2, size):
 
 def train_model(data_loader, model, optimizer):
     num_batches = len(data_loader)  # trainingdata/batches
-    print("TRAINING")
-    print(num_batches)
     total_loss = 0
     model.train()
 
     for X, y in data_loader:
         # X has the shape of an array the size number of batches that has sequences inside of sequence length
         # Y has the batch size, but only one value inside - sequence length =1
-        print(X)
-        print(y)
         optimizer.zero_grad()  # sets gradients back to zero
         output = model(X)
-        print(output)
         loss = my_loss_fn(output, y[:, 0], y[:, 1], num_batches)
         loss.backward()  # gradients computed
         optimizer.step()  # to proceed gradient descent
@@ -145,7 +139,7 @@ def predict(data_loader, model):
     # Generate predictions for the next m timestamps
     # for i in range(m):
     # output = model(input_seq)
-    # input_seq = torch.cat([input_seq[:, 1:, :], output.unsqueeze(1)], dim=1)
+        # input_seq = torch.cat([input_seq[:, 1:, :], output.unsqueeze(1)], dim=1)
     with torch.no_grad():
         for X, _ in data_loader:
             y_star = model(X)
@@ -165,21 +159,17 @@ def calc_MSE_Accuracy(y_test, y_test_pred):
 
 
 def main():
-    # df = pd.read_csv("job_3418339.csv", sep=",")
-    df = pd.read_csv("j.csv", sep=",")
-    data = df
-
+    df = pd.read_csv("job_3418339.csv", sep=",")
     # split into training and test set - check until what index the training data is
-    # test_head = data.index[int(0.8 * len(data))]
-    df_train = df.loc[:8 - 1, :]
-    df_test = df.loc[8:10, :]
-    print(len(df_train))
-    print(len(df_test))
+    test_head = df.index[int(0.8 * len(df))]
+    df_train = df.loc[:test_head - 1, :]
+    df_test = df.loc[test_head:len(df), :]
     features = ['start_time', 'mean_cpu_usage', 'mean_disk_io_time', 'canonical_mem_usage']
     target = ["mean_cpu_usage", 'canonical_mem_usage']
     means = {}
     stdevs = {}
-    # normalize data: The short answer is — it dramatically improves model accuracy. Normalization gives equal weights/importance to each variable so that no single variable steers model performance in one direction just because they are bigger numbers
+    # normalize data: this improves model accuracy as it gives equal weights/importance to each variable so that no single
+    # variable steers model performance in one direction just because they are bigger numbers
     for c in df_train.columns:
         mean_train = df_train[c].mean()
         stdev_train = df_train[c].std()
@@ -189,7 +179,6 @@ def main():
         df_test.loc[:, c] = (df_test.loc[:, c] - mean_train) / stdev_train
 
     # Create datasets that PyTorch DataLoader can work with
-    print(df_train)
     train_dataset = SequenceDataset(
         df_train,
         target=target,
@@ -241,7 +230,6 @@ def main():
             target_mean = means[c]
         df_out[c] = df_out[c] * target_stdev + target_mean
 
-    print(df_out)
     in_seconds = 1000000
     in_minutes = in_seconds * 60
     in_hours = in_minutes * 12  # each interval has 5 minutes
