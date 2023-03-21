@@ -8,8 +8,9 @@ from torch.utils.data import Dataset, DataLoader
 # hyperparameters
 # for each training instance, we’re going to give the model a sequence of observations.
 # dataset = [1,2,3,4], in sequence set 2 I would have training X:[1,2],[3,4] Y:[2],[4]
-sequence_length = 2
-batch_size = 5  # batch_size - number of samples we want to pass into the training loop at each iteration
+#sequence_length = 4
+#batch_size = number of windows or sequences that are processed in parallel during training. A batch is a set of windows that are processed together, and the gradients of the loss function are calculated based on the average loss over the entire batch.
+batch_size = 1  # batch_size - number of samples we want to pass into the training loop at each iteration
 learning_rate = 5e-4
 num_hidden_units = 10  # The size of your LSTM layers, or the number of hidden units in each layer, will affect the capacity of your model. A larger number of hidden units will allow the model to capture more complex patterns in the data, but may also make the model more prone to overfitting.
 num_layers = 10  # each layer consists of some hidden units
@@ -19,26 +20,57 @@ epochs = 5
 # source: https://www.crosstab.io/articles/time-series-pytorch-lstm/
 # This custom Dataset specifies what happens when somebody requests the i’th element of the dataset. In a tabular dataset, this would be the i’th row of the table, but here we need to retrieve a sequence of rows
 class SequenceDataset(Dataset):
-    def __init__(self, dataframe, target, features, sequence_length=5):
+    def __init__(self, dataframe, target, features): #, sequence_length=5):
         self.features = features
         self.target = target
-        self.sequence_length = sequence_length
+        #self.sequence_length = sequence_length
         self.y = torch.tensor(dataframe[target].values).float()
         self.X = torch.tensor(dataframe[features].values).float()
+        self.window_size = 4
 
     def __len__(self):
-        return self.X.shape[0]
+        return self.X.shape[0] - self.window_size
 
+    #returns the input sequence and the target value
     def __getitem__(self, i):
-        if i >= self.sequence_length - 1:
-            i_start = i - self.sequence_length + 1
-            x = self.X[i_start:(i + 1), :]
-        else:
-            padding = self.X[0].repeat(self.sequence_length - i - 1, 1)
-            x = self.X[0:(i + 1), :]
-            x = torch.cat((padding, x), 0)
-        return x, self.y[i]
+        print("GET "+str(i))
+        x = self.data[i:i + self.window_size, :]
+        print(x)
+        y = self.data[i + self.window_size, :]
+        print(y)
+        return x, y
+        # print("GET ITEM "+str(i))
+        # if i >= self.sequence_length - 1:
+        #     print("i >= self.sequence_length - 1")
+        #     i_start = i - self.sequence_length + 1
+        #     x = self.X[i_start:(i + 1), :]
+        # else:
+        #     padding = self.X[0].repeat(self.sequence_length - i - 1, 1)
+        #     x = self.X[0:(i + 1), :]
+        #     print("Else")
+        #     x = torch.cat((padding, x), 0)
+        # print("Return this")
+        # print(self.y)
+        # print(self.y[i])
+        # return x, self.y[i]
 
+def test_model(data_loader, model):
+    num_batches = len(data_loader)
+    model.eval()
+    with torch.no_grad(): #do not calculate the gradient
+        print("H")
+        print(data_loader)
+        for X, y in data_loader:
+            #if batch size is 2,
+            print("TESTX")
+            print(X)
+            print("TESTY")
+            print(y)
+            output1, output2 = model(X)
+            loss1 = my_loss_fn(output1, y[:, 0], num_batches)
+            loss2 = my_loss_fn(output2, y[:, 1], num_batches)
+            loss = loss1 + loss2
+    print(f"Total test loss: {(loss) / num_batches}")
 
 class RegressionLSTM(nn.Module):
     def __init__(self, num_sensors, hidden_units):
@@ -46,17 +78,17 @@ class RegressionLSTM(nn.Module):
         self.num_sensors = num_sensors  # this is the number of features
         self.hidden_units = hidden_units
         self.num_layers = num_layers
-        #self.bidirectional = True
+        # self.bidirectional = True
         self.lstm = nn.LSTM(
             input_size=num_sensors,  # the number of expected features in the input x
             hidden_size=hidden_units,  # The number of features in the hidden state h
             batch_first=True,
             # If True, then the input and output tensors are provided as (batch, seq, feature) instead of (seq, batch, feature)
             # bidirectional=True,
-            num_layers=self.num_layers
-            # Number of recurrent layers. E.g., setting num_layers=2 would mean stacking two LSTMs together to form a stacked LSTM, with the second LSTM taking in outputs of the first LSTM and computing the final results.
+            num_layers=self.num_layers  # number of layers that have some hidden units
         )
-        self.linear = nn.Linear(in_features=self.hidden_units, out_features=2)
+        self.linear1 = nn.Linear(in_features=self.hidden_units, out_features=1)
+        self.linear2 = nn.Linear(in_features=self.hidden_units, out_features=1)
 
     def forward(self, x):
         batch_size = x.shape[
@@ -66,9 +98,10 @@ class RegressionLSTM(nn.Module):
         h0 = torch.zeros(self.num_layers, batch_size, self.hidden_units).requires_grad_()
         # a tensor containing the initial cell state for each element in the batch, of shape (batch, hidden_size).
         c0 = torch.zeros(self.num_layers, batch_size, self.hidden_units).requires_grad_()
-        out, (hn, cn) = self.lstm(x, (h0, c0))
-        out = self.linear(out[:, -1, :])
-        return out
+        out, (hn, cn) = self.lstm(x, (h0, c0))  # pass the input sequence and initial states to the lstm
+        out1 = self.linear1(out[:, -1, :])
+        out2 = self.linear2(out[:, -1, :])
+        return out1, out2
 
 
 def mse(prediction, real_value, size):
@@ -89,15 +122,14 @@ def naive_ratio(prediction, real_value, size):
     # Compute the sum of the absolute differences
     sum_abs_diff = torch.sum(abs_diff)
     et = (1 / size) * sum_abs_diff
-    return et / et1
+    return et / (et1 + 0.000000000001)
 
 
-def my_loss_fn(output, target1, target2, size):
+def my_loss_fn(output, target, size):
     loss = 0
-    loss += mse(output[:, 0], target1, size)
-    loss += mse(output[:, 1], target2, size)
-    loss += naive_ratio(output[:, 0], target1, size)
-    loss += naive_ratio(output[:, 1], target2, size)
+    loss += mse(output, target, size)
+    # loss += naive_ratio(output[:, 0], target1, size)
+    # loss += naive_ratio(output[:, 1], target2, size)
     return loss
 
 
@@ -105,13 +137,19 @@ def train_model(data_loader, model, optimizer):
     num_batches = len(data_loader)  # trainingdata/batches
     total_loss = 0
     model.train()
-
+    print(data_loader)
     for X, y in data_loader:
         # X has the shape of an array the size number of batches that has sequences inside of sequence length
         # Y has the batch size, but only one value inside - sequence length =1
+        print("TRAINX")
+        print(X)
+        print("TrainY")
+        print(y)
         optimizer.zero_grad()  # sets gradients back to zero
-        output = model(X)
-        loss = my_loss_fn(output, y[:, 0], y[:, 1], num_batches)
+        output1, output2 = model(X)
+        loss1 = my_loss_fn(output1, y[:, 0], num_batches)
+        loss2 = my_loss_fn(output2, y[:, 1], num_batches)
+        loss = loss1 + loss2
         loss.backward()  # gradients computed
         optimizer.step()  # to proceed gradient descent
 
@@ -121,30 +159,21 @@ def train_model(data_loader, model, optimizer):
     print(f"Train loss: {avg_loss}")
 
 
-def test_model(data_loader, model):
-    num_batches = len(data_loader)
-    model.eval()
-    with torch.no_grad():
-        for X, y in data_loader:
-            output = model(X)
-            loss = my_loss_fn(output, y[:, 0], y[:, 1], num_batches)
-    print(f"Total test loss: {(loss) / num_batches}")
+
 
 
 def predict(data_loader, model):
-    output = torch.tensor([])
+    output1 = torch.tensor([])
+    output2 = torch.tensor([])
     model.eval()
-    # Use the last n inputs from the training data as initial input sequence
-    # input_seq = x_train[:, -n:, :]
-    # Generate predictions for the next m timestamps
-    # for i in range(m):
-    # output = model(input_seq)
-        # input_seq = torch.cat([input_seq[:, 1:, :], output.unsqueeze(1)], dim=1)
     with torch.no_grad():
         for X, _ in data_loader:
-            y_star = model(X)
-            output = torch.cat((output, y_star), 0)
-    return output
+            y_star_multiple = model(X)
+            y_star_1 = y_star_multiple[0]
+            y_star_2 = y_star_multiple[1]
+            output1 = torch.cat((output1, y_star_1), 0)
+            output2 = torch.cat((output2, y_star_2), 0)
+    return output1, output2
 
 
 def calc_MSE_Accuracy(y_test, y_test_pred):
@@ -159,7 +188,7 @@ def calc_MSE_Accuracy(y_test, y_test_pred):
 
 
 def main():
-    df = pd.read_csv("job_3418339.csv", sep=",")
+    df = pd.read_csv("j.csv", sep=",")
     # split into training and test set - check until what index the training data is
     test_head = df.index[int(0.8 * len(df))]
     df_train = df.loc[:test_head - 1, :]
@@ -170,28 +199,27 @@ def main():
     stdevs = {}
     # normalize data: this improves model accuracy as it gives equal weights/importance to each variable so that no single
     # variable steers model performance in one direction just because they are bigger numbers
-    for c in df_train.columns:
-        mean_train = df_train[c].mean()
-        stdev_train = df_train[c].std()
-        means[c] = mean_train
-        stdevs[c] = stdev_train
-        df_train.loc[:, c] = (df_train.loc[:, c] - mean_train) / stdev_train
-        df_test.loc[:, c] = (df_test.loc[:, c] - mean_train) / stdev_train
+    # for c in df_train.columns:
+    #     mean_train = df_train[c].mean()
+    #     stdev_train = df_train[c].std()
+    #     means[c] = mean_train
+    #     stdevs[c] = stdev_train
+    #     df_train.loc[:, c] = (df_train.loc[:, c] - mean_train) / stdev_train
+    #     df_test.loc[:, c] = (df_test.loc[:, c] - mean_train) / stdev_train
 
     # Create datasets that PyTorch DataLoader can work with
     train_dataset = SequenceDataset(
         df_train,
         target=target,
         features=features,
-        sequence_length=sequence_length
+       # sequence_length=sequence_length
     )
     test_dataset = SequenceDataset(
         df_test,
         target=target,
         features=features,
-        sequence_length=sequence_length
+        #sequence_length=sequence_length
     )
-
     # this will have the size batch_size x sequence_length x number_of_features
     # For training, we’ll shuffle the data (the rows within each data sequence are not shuffled, only the order in which we draw the blocks).
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -209,26 +237,25 @@ def main():
         print()
 
     train_eval_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
-    prediction_train = predict(train_eval_loader, model).numpy()
-    prediction_test = predict(test_loader, model).numpy()
-
-    df_train.insert(2, "forecast_cpu", prediction_train[:, 0], True)
-    df_train.insert(2, "forecast_mem", prediction_train[:, 1], True)
-    df_test.insert(2, "forecast_cpu", prediction_test[:, 0], True)
-    df_test.insert(2, "forecast_mem", prediction_test[:, 1], True)
+    prediction_train = predict(train_eval_loader, model)
+    prediction_test = predict(test_loader, model)
+    df_train.insert(2, "forecast_cpu", prediction_train[0], True)
+    df_train.insert(2, "forecast_mem", prediction_train[1], True)
+    df_test.insert(2, "forecast_cpu", prediction_test[0], True)
+    df_test.insert(2, "forecast_mem", prediction_test[1], True)
 
     df_out = pd.concat([df_train, df_test])
-    for c in df_out.columns:
-        if c == 'forecast_cpu':
-            target_stdev = stdevs["mean_cpu_usage"]
-            target_mean = means["mean_cpu_usage"]
-        elif c == 'forecast_mem':
-            target_stdev = stdevs["canonical_mem_usage"]
-            target_mean = means["canonical_mem_usage"]
-        else:
-            target_stdev = stdevs[c]
-            target_mean = means[c]
-        df_out[c] = df_out[c] * target_stdev + target_mean
+    # for c in df_out.columns:
+    #     if c == 'forecast_cpu':
+    #         target_stdev = stdevs["mean_cpu_usage"]
+    #         target_mean = means["mean_cpu_usage"]
+    #     elif c == 'forecast_mem':
+    #         target_stdev = stdevs["canonical_mem_usage"]
+    #         target_mean = means["canonical_mem_usage"]
+    #     else:
+    #         target_stdev = stdevs[c]
+    #         target_mean = means[c]
+    #     df_out[c] = df_out[c] * target_stdev + target_mean
 
     in_seconds = 1000000
     in_minutes = in_seconds * 60
