@@ -10,10 +10,10 @@ from torch.utils.data import Dataset, DataLoader
 sequence_length = 3  # I want to make a prediction based on how many values before
 n = 1  # how many timestamps after I want to predict - example: n=1, sequ =3: x=[1,2,3],y=[4]
 batch_size = 1  # batch_size = nr of sequences that are processed in parallel during training - gradients of the loss function are calculated based on the average loss over the entire batch.
-learning_rate = 5e-3
-num_hidden_units = 3  # The size of the LSTM layers, or the number of hidden units in each layer, will affect the capacity of the model. A larger number of hidden units will allow the model to capture more complex patterns in the data, but may also make the model more prone to overfitting.
-num_layers = 2
-epochs = 30
+learning_rate = 0.005
+num_hidden_units = 5  # The size of the LSTM layers, or the number of hidden units in each layer, will affect the capacity of the model. A larger number of hidden units will allow the model to capture more complex patterns in the data, but may also make the model more prone to overfitting.
+num_layers = 5
+epochs = 10
 
 
 # source: https://www.crosstab.io/articles/time-series-pytorch-lstm/
@@ -49,7 +49,12 @@ class RegressionLSTM(nn.Module):
             # bidirectional=True,
             num_layers=self.num_layers  # number of layers that have some hidden units
         )
-        self.linear = nn.Linear(in_features=self.hidden_units, out_features=2)
+        self.linear1 = nn.Linear(hidden_units, 32)
+        self.linear2 = nn.Linear(hidden_units, 32)
+        self.output1 = nn.Linear(32, 1)
+        self.output2 = nn.Linear(32, 1)
+        self.relu = nn.ReLU()
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         batch_size = x.shape[
@@ -58,8 +63,12 @@ class RegressionLSTM(nn.Module):
         c0 = torch.zeros(self.num_layers, batch_size,
                          self.hidden_units).requires_grad_()  # a tensor containing the initial cell state for each element in the batch, of shape (batch, hidden_size).
         out, (hn, cn) = self.lstm(x, (h0, c0))  # pass the input sequence and initial states to the lstm
-        out = self.linear(out[:, -1, :])
-        return out
+        out = out[:, -1, :]
+        out11 = self.relu(self.linear1(out))
+        out21 = self.relu(self.linear2(out))
+        out1 = self.sigmoid(self.output1(out11))
+        out2 = self.sigmoid(self.output2(out21))
+        return out1, out2
 
 
 def mse(prediction, real_value, size):
@@ -84,7 +93,7 @@ def naive_ratio(prediction, real_value, size):
 def my_loss_fn(output, target, size):
     loss = 0
     loss += mse(output, target, size)
-    loss += naive_ratio(output, target, size)
+    #loss += naive_ratio(output, target, size)
     return loss
 
 
@@ -93,10 +102,11 @@ def test_model(data_loader, model):
     model.eval()
     with torch.no_grad():  # do not calculate the gradient
         for i, (X, y) in enumerate(data_loader):
+
             if i <= ((num_batches - n) // batch_size):
-                output = model(X)
-                loss1 = my_loss_fn(output[0][0], y[:, 0], num_batches)
-                loss2 = my_loss_fn(output[0][1], y[:, 1], num_batches)
+                output1, output2 = model(X)
+                loss1 = my_loss_fn(output1, y[:, 0], num_batches)
+                loss2 = my_loss_fn(output2, y[:, 1], num_batches)
                 loss = loss1 + loss2
             else:
                 break
@@ -110,9 +120,9 @@ def train_model(data_loader, model, optimizer):
     for i, (X, y) in enumerate(data_loader):
         if i <= (num_batches - n) // batch_size:
             optimizer.zero_grad()  # sets gradients back to zero
-            output = model(X)
-            loss1 = my_loss_fn(output[0][0], y[:, 0], num_batches)
-            loss2 = my_loss_fn(output[0][1], y[:, 1], num_batches)
+            output1, output2 = model(X)
+            loss1 = my_loss_fn(output1, y[:, 0], num_batches)
+            loss2 = my_loss_fn(output2, y[:, 1], num_batches)
             loss = loss1 + loss2
             loss.backward()  # gradients computed
             optimizer.step()  # to proceed gradient descent
@@ -131,11 +141,10 @@ def predict(data_loader, model):
     with torch.no_grad():
         for X, _ in data_loader:
             y_prediction_multiple = model(X)
-            print(y_prediction_multiple)
-            y_prediction_1 = y_prediction_multiple[0][0]
-            y_prediction_2 = y_prediction_multiple[0][1]
-            output1 = torch.cat((output1, y_prediction_1.reshape(1)), 0)
-            output2 = torch.cat((output2, y_prediction_2.reshape(1)), 0)
+            y_prediction_1 = y_prediction_multiple[0]
+            y_prediction_2 = y_prediction_multiple[1]
+            output1 = torch.cat((output1, y_prediction_1), 0)
+            output2 = torch.cat((output2, y_prediction_2), 0)
     return output1, output2
 
 
@@ -150,27 +159,24 @@ def calc_MSE_Accuracy(y_test, y_test_pred):
 
 
 def main():
-    df = pd.read_csv("j.csv", sep=",")
+    df = pd.read_csv("job_smaller.csv", sep=",")
     # split into training and test set - check until what index the training data is
     test_head = df.index[int(0.8 * len(df))]
     df_train = df.loc[:test_head - 1, :]
     df_test = df.loc[test_head:len(df), :]
-    print(df_train)
-    print(df_test)
-    features = ['start_time', 'mean_cpu_usage', 'mean_disk_io_time', 'canonical_mem_usage']
-    target = ["mean_cpu_usage", 'canonical_mem_usage']
+    features = ['start_time', 'mean_CPU_usage', 'mean_disk_IO_time', 'unmapped_page_cache_mem_usage']
+    target = ["mean_CPU_usage", 'mean_disk_IO_time']
     mins = {}
     maxs = {}
     # normalize data: this improves model accuracy as it gives equal weights/importance to each variable
     for c in df_train.columns:
-        min = np.min(df_train[c])
-        max = np.max(df_train[c])
+        min = np.min(df[c])
+        max = np.max(df[c])
         mins[c] = min
         maxs[c] = max
         value_range = max - min
         df_train.loc[:, c] = (df_train.loc[:, c] - min) / value_range
         df_test.loc[:, c] = (df_test.loc[:, c] - min) / value_range
-
     # Create datasets that PyTorch DataLoader can work with
     train_dataset = SequenceDataset(
         df_train,
@@ -206,56 +212,59 @@ def main():
 
     df_out = pd.concat([df_train, df_test])
     prediction_test_cpu, prediction_test_mem = prediction_test
+    print(prediction_test_cpu)
+    print(prediction_test_mem)
     prediction_train_cpu, prediction_train_mem = prediction_train
-
-    df_out[c] = (df_out[c] - min) / (max - min)
-
     for c in df_out.columns:
         max = maxs[c]
         min = mins[c]
         df_out[c] = (df_out[c] * (max - min)) + min
-    prediction_test_cpu = (prediction_test_cpu * (maxs["mean_cpu_usage"] - mins["mean_cpu_usage"])) + mins[
-        "mean_cpu_usage"]
-    prediction_test_mem = (prediction_test_mem * (maxs["canonical_mem_usage"] - mins["canonical_mem_usage"])) + mins[
-        "canonical_mem_usage"]
-    prediction_train_cpu = (prediction_train_cpu * (maxs["mean_cpu_usage"] - mins["mean_cpu_usage"])) + mins[
-        "mean_cpu_usage"]
-    prediction_train_mem = (prediction_train_mem * (maxs["canonical_mem_usage"] - mins["canonical_mem_usage"])) + mins[
-        "canonical_mem_usage"]
+    prediction_test_cpu = (prediction_test_cpu * (maxs["mean_CPU_usage"] - mins["mean_CPU_usage"])) + mins[
+        "mean_CPU_usage"]
+    prediction_test_mem = (prediction_test_mem * (maxs["mean_disk_IO_time"] - mins["mean_disk_IO_time"])) + mins[
+        "mean_disk_IO_time"]
+    prediction_train_cpu = (prediction_train_cpu * (maxs["mean_CPU_usage"] - mins["mean_CPU_usage"])) + mins[
+        "mean_CPU_usage"]
+    prediction_train_mem = (prediction_train_mem * (maxs["mean_disk_IO_time"] - mins["mean_disk_IO_time"])) + mins[
+        "mean_disk_IO_time"]
     in_seconds = 1000000
     in_minutes = in_seconds * 60
-    in_hours = in_minutes * 12  # each interval has 5 minutes
+    in_hours = in_minutes * 60
     in_days = in_hours * 24
-    index_in_hours = ((df['start_time'] - 600000000) / in_hours)
-
+    index_in_hours = ((df_out['start_time'] - 600000000) / in_hours)
     print("TRAIN ERRORS CPU:")
-    print(df_out["mean_cpu_usage"].iloc[sequence_length - 1:len(df_train)])
-    print(prediction_train_cpu)
-    calc_MSE_Accuracy(df_out["mean_cpu_usage"].iloc[sequence_length - 1:len(df_train)], prediction_train_cpu)
+    calc_MSE_Accuracy(df_out["mean_CPU_usage"].iloc[sequence_length - 1:len(df_train)], prediction_train_cpu)
     print("TRAIN ERRORS MEM:")
-    calc_MSE_Accuracy(df_out["canonical_mem_usage"].iloc[sequence_length - 1:len(df_train)], prediction_train_mem)
+    calc_MSE_Accuracy(df_out["mean_disk_IO_time"].iloc[sequence_length - 1:len(df_train)], prediction_train_mem)
     print("TEST ERRORS CPU:")
-    calc_MSE_Accuracy(df_out["mean_cpu_usage"].iloc[len(df_train) + sequence_length - 1:len(df_train) + len(df_test)],
+    calc_MSE_Accuracy(df_out["mean_CPU_usage"].iloc[len(df_train) + sequence_length - 1:len(df_train) + len(df_test)],
                       prediction_test_cpu)
     print("TEST ERRORS MEM:")
     calc_MSE_Accuracy(
-        df_out["canonical_mem_usage"].iloc[len(df_train) + sequence_length - 1:len(df_train) + len(df_test)],
+        df_out["mean_disk_IO_time"].iloc[len(df_train) + sequence_length - 1:len(df_train) + len(df_test)],
         prediction_test_mem)
 
     index_test = index_in_hours.iloc[len(df_train) + sequence_length - 1:len(df_train) + len(df_test)]
     index_train = index_in_hours.iloc[sequence_length - 1:len(df_train)]
-    plt.plot(index_in_hours, df_out["mean_cpu_usage"].values, label='actual CPU usage', linewidth=1,
-             markerfacecolor='blue')
-    plt.plot(index_in_hours, df_out["canonical_mem_usage"].values, label='actual memory usage', linewidth=1,
-             markerfacecolor='green')
-    plt.plot(index_test, prediction_test_cpu, label='prediction CPU', linewidth=2, markerfacecolor='red')
-    plt.plot(index_test, prediction_test_mem, label='prediction memory usage', linewidth=1, markerfacecolor='magenta')
-    plt.plot(index_train, prediction_train_cpu, label='prediction CPU', linewidth=2, markerfacecolor='red')
-    plt.plot(index_train, prediction_train_mem, label='prediction memory usage', linewidth=1,
-             markerfacecolor='magenta')
-    # plt.plot(index_in_hours, prediction["forecast_mem"].values, label='prediction memory', linewidth=0.5)
-    plt.legend()
-    # plt.savefig('CPU_mean_days_all.png')
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
+    axs[0].plot(index_in_hours, df_out["mean_CPU_usage"].values, label='actual CPU usage', linewidth=1,
+               markerfacecolor='blue')
+    axs[0].plot(index_test, prediction_test_cpu, label='predicted CPU', linewidth=1, markerfacecolor='red')
+    axs[0].plot(index_train, prediction_train_cpu, label='predicted CPU', linewidth=1, markerfacecolor='red')
+    axs[0].set_xlabel('Time (hours)')
+    axs[0].set_ylabel('CPU prediction')
+    axs[0].set_title('Mean CPU prediction')
+    axs[0].legend()
+
+    axs[1].plot(index_in_hours, df_out["mean_disk_IO_time"].values, label='actual memory usage', linewidth=1,
+               markerfacecolor='blue')
+    axs[1].plot(index_test, prediction_test_mem, label='predicted disk IO time', linewidth=1, markerfacecolor='red')
+    axs[1].plot(index_train, prediction_train_mem, label='predicted disk IO time', linewidth=1, markerfacecolor='red')
+    axs[1].set_xlabel('Time (hours)')
+    axs[1].set_ylabel('Mean disk IO time')
+    axs[1].set_title('Disk IO time prediction')
+    axs[1].legend()
+
     plt.show()
 
 
