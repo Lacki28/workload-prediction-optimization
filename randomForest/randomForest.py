@@ -27,11 +27,11 @@ def naive_ratio(prediction, real_value, size):
 
 
 def calc_MSE_Accuracy(y_test, y_test_pred):
-    print("Mean absolute error =", round(sm.mean_absolute_error(y_test, y_test_pred), 2))
-    print("Mean squared error =", round(sm.mean_squared_error(y_test, y_test_pred), 2))
-    print("Median absolute error =", round(sm.median_absolute_error(y_test, y_test_pred), 2))
-    print("Explain variance score =", round(sm.explained_variance_score(y_test, y_test_pred), 2))
-    print("R2 score =", round(sm.r2_score(y_test, y_test_pred), 2))
+    print("Mean absolute error =", round(sm.mean_absolute_error(y_test, y_test_pred), 5))
+    print("Mean squared error =", round(sm.mean_squared_error(y_test, y_test_pred), 5))
+    print("Median absolute error =", round(sm.median_absolute_error(y_test, y_test_pred), 5))
+    print("Explain variance score =", round(sm.explained_variance_score(y_test, y_test_pred), 5))
+    print("R2 score =", round(sm.r2_score(y_test, y_test_pred), 5))
     nr = naive_ratio(torch.from_numpy(y_test_pred), torch.tensor(y_test), len(y_test))
     print("Naive ratio =", nr)
 
@@ -42,7 +42,7 @@ def plot_results(df, y_test, y_prediction, train_size):
     in_hours = in_minutes * 60
     in_days = in_hours * 24
     index_in_hours = ((df['start_time'] - 600000000) / in_hours)
-    index_test = index_in_hours.iloc[train_size + sequence_length:len(df)-n+1]
+    index_test = index_in_hours.iloc[train_size + sequence_length:len(df) - n + 1]
     fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
     axs[0].plot(index_test, y_test[:, 0], label='actual CPU usage', linewidth=1,
                 markerfacecolor='blue')
@@ -66,9 +66,9 @@ def plot_results(df, y_test, y_prediction, train_size):
 def create_sliding_window(x_data, y_data):
     X = []
     y = []
-    for i in range(sequence_length, len(x_data)-n+1):
+    for i in range(sequence_length, len(x_data) - n + 1):
         X.append(x_data.values[i - sequence_length:i])
-        y.append(y_data.values[i+n-1])
+        y.append(y_data.values[i + n - 1])
     X = np.array(X)
     y = np.array(y)
     return X, y
@@ -92,9 +92,9 @@ def main():
     X_test = np.reshape(X_test, (samples, sequences * features))
 
     # X has the size observations[sequences[features]] - it needs to be reshaped to observations[sequences*features]
-    regressor = MultiOutputRegressor(
-        RandomForestRegressor(n_estimators=trees, max_depth=max_depth, random_state=0)
-    )
+    # MultiOutputRegressor fits one random forest for each target. Each tree inside then is predicting one of your outputs. Without the wrapper, RandomForestRegressor fits trees targeting all the outputs at once.
+
+    regressor = MultiOutputRegressor(RandomForestRegressor(n_estimators=trees, max_depth=max_depth, random_state=0))
 
     regressor.fit(X_train, y_train)
     # Predict on new data
