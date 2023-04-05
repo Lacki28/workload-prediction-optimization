@@ -1,3 +1,4 @@
+import math
 import os
 from functools import partial
 
@@ -14,11 +15,12 @@ from scipy.signal import savgol_filter
 from torch.utils.data import Dataset, DataLoader
 
 # hyperparameters
-sequence_length = 8  # I want to make a prediction based on how many values before
+# sequence_length = 8  # I want to make a prediction based on how many values before
 n = 1  # how many timestamps after I want to predict - example: n=1, sequ =3: x=[1,2,3],y=[4]
-epochs = 200
-features = ['start_time', 'mean_CPU_usage', 'unmapped_page_cache_mem_usage', 'canonical_mem_usage']
-target = ["mean_CPU_usage", 'unmapped_page_cache_mem_usage']
+epochs = 300
+features = ['start_time', 'mean_CPU_usage', 'canonical_mem_usage', 'assigned_mem_usage', 'max_mem_usage',
+            'mean_local_disk_space_used', 'max_CPU_usage', 'nr_of_tasks', 'scheduling_class']
+target = ["mean_CPU_usage", 'canonical_mem_usage']
 
 
 class SequenceDataset(Dataset):
@@ -36,7 +38,7 @@ class SequenceDataset(Dataset):
 
     # returns the input sequence and the target value
     def __getitem__(self, i):
-        # start at elemet i and go to element i+sequence length, the result is "sequence length many" rows
+        # start at element i and go to element i+sequence length, the result is "sequence length many" rows
         x = self.X[i:(i + self.sequence_length), :]
         # start at the last element of x (sequence length +i) and predict n timestamps ahead and subtract -1
         return x, self.y[i + self.sequence_length + n - 1]
@@ -58,7 +60,6 @@ class RegressionLSTM(nn.Module):
             # bidirectional=True,
             num_layers=self.num_layers  # number of layers that have some hidden units
         )
-        print(lin_layers)
         self.linear1 = nn.Linear(num_hidden_units, lin_layers)
         self.linear2 = nn.Linear(num_hidden_units, lin_layers)
         self.output1 = nn.Linear(lin_layers, 1)
@@ -91,15 +92,17 @@ def mse(prediction, real_value):
 
 def naive_ratio(prediction, real_value):
     # Compute the absolute difference between corresponding elements of a and b
-    abs_diff_et1 = torch.abs(prediction - real_value)
+    prediction_nr = prediction[n:]
+    real_value_nr = real_value[:-n]
+    abs_diff_et1 = torch.abs(prediction_nr - real_value_nr)
     # Compute the sum of the absolute differences
     sum_abs_diff_et1 = torch.sum(abs_diff_et1)
-    et1 = (1 / len(prediction)) * sum_abs_diff_et1
+    et1 = (1 / len(prediction_nr)) * sum_abs_diff_et1
     abs_diff = torch.abs(prediction - real_value)
     # Compute the sum of the absolute differences
     sum_abs_diff = torch.sum(abs_diff)
     et = (1 / len(prediction)) * sum_abs_diff
-    return et / (et1 + 0.000000000001)
+    return et / (et1)
 
 
 def my_loss_fn(output, target):
@@ -110,8 +113,10 @@ def my_loss_fn(output, target):
 
 
 def my_accuracy_fn(output, target):
-    accuracy = round(sm.r2_score(target, output))
-    return accuracy
+    r2 = sm.r2_score(target, output)
+    if math.isnan(r2):
+        return - math.inf
+    return r2
 
 
 def test_model(data_loader, model, optimizer, ix_epoch, device):
@@ -127,8 +132,6 @@ def test_model(data_loader, model, optimizer, ix_epoch, device):
             acc1 = my_accuracy_fn(output1, y[:, 0])
             acc2 = my_accuracy_fn(output2, y[:, 1])
             accuracy = acc1 + acc2
-    print(f"Total test loss: {total_loss}")
-    print(f"Total test accuracy: {accuracy}")
     with tune.checkpoint_dir(
             ix_epoch) as checkpoint_dir:  # context manager creates a new directory for each epoch in the tuning process and returns the path to that directory as checkpoint_dir.
         path = os.path.join(checkpoint_dir,
@@ -153,7 +156,6 @@ def train_model(data_loader, model, optimizer, device):
         optimizer.step()  # to proceed gradient descent
 
         total_loss += loss.item()
-    print(f"Train loss: {total_loss}")
 
 
 def predict(data_loader, model, device):
@@ -171,167 +173,208 @@ def predict(data_loader, model, device):
     return output1, output2
 
 
-def calc_MSE_Accuracy(y_test, y_test_pred):
-    print("Mean absolute error =", round(sm.mean_absolute_error(y_test, y_test_pred), 5))
-    print("Mean squared error =", round(sm.mean_squared_error(y_test, y_test_pred), 5))
-    print("Median absolute error =", round(sm.median_absolute_error(y_test, y_test_pred), 5))
-    print("Explain variance score =", round(sm.explained_variance_score(y_test, y_test_pred), 5))
-    print("R2 score =", round(sm.r2_score(y_test, y_test_pred), 5))
-    nr = naive_ratio(y_test_pred.clone().detach(), torch.tensor(y_test.values))
-    print("Naive ratio =", nr)
+def calc_MSE_Accuracy(y_test, y_test_pred, index):
+    mae = []
+    mse = []
+    r2 = []
+    nr = []
+    for i in range(len(y_test)):
+        y_test_pred[i] = (y_test_pred[i][0].squeeze(), y_test_pred[i][1].squeeze())
+        mae.append(round(sm.mean_absolute_error(y_test[i][index], y_test_pred[i][index]), 5))
+        mse.append(round(sm.mean_squared_error(y_test[i][index], y_test_pred[i][index]), 5))
+        r2.append(round(sm.r2_score(y_test[i][index], y_test_pred[i][index]), 5))
+        nr.append(naive_ratio(y_test_pred[i][index], y_test[i][index]))
+    print("Mean absolute error =", (sum(mae) / len(mae)))
+    print("Mean squared error =", (sum(mse) / len(mse)))
+    print("R2 score =", (sum(r2) / len(r2)))
+    print("Naive ratio =", (sum(nr) / len(nr)))
 
 
 mins = {}
+mins["start_time"] = 600000000
 maxs = {}
+maxs["start_time"] = 2505900000000
 
 
-def normalize_data_minMax(df_train, df, df_test):
+def normalize_data_minMax(df):
     pd.options.mode.chained_assignment = None
-    for c in df_train.columns:
-        min = np.min(df[c])
-        max = np.max(df[c])
-        mins[c] = min
-        maxs[c] = max
+    for c in df.columns:
+        if mins.get(c) is None:
+            min = np.min(df[c])
+            max = np.max(df[c])
+            mins[c] = min
+            maxs[c] = max
+        else:
+            min = mins[c]
+            max = maxs[c]
         value_range = max - min
-        df_train.loc[:, c] = (df_train.loc[:, c] - min) / value_range
-        df_test.loc[:, c] = (df_test.loc[:, c] - min) / value_range
-    return df_train, df_test
+        df.loc[:, c] = (df.loc[:, c] - min) / value_range
+    return df
 
 
-def denormalize_data_minMax(df_out, prediction_test_cpu, prediction_test_mem, prediction_train_cpu,
-                            prediction_train_mem):
-    for c in df_out.columns:
-        max = maxs[c]
-        min = mins[c]
-        df_out[c] = (df_out[c] * (max - min)) + min
+def denormalize_data_minMax(prediction_test_cpu, prediction_test_mem):
     prediction_test_cpu = (prediction_test_cpu * (maxs["mean_CPU_usage"] - mins["mean_CPU_usage"])) + mins[
         "mean_CPU_usage"]
     prediction_test_mem = (prediction_test_mem * (
-            maxs["unmapped_page_cache_mem_usage"] - mins["unmapped_page_cache_mem_usage"])) + mins[
-                              "unmapped_page_cache_mem_usage"]
-    prediction_train_cpu = (prediction_train_cpu * (maxs["mean_CPU_usage"] - mins["mean_CPU_usage"])) + mins[
-        "mean_CPU_usage"]
-    prediction_train_mem = (prediction_train_mem * (
-            maxs["unmapped_page_cache_mem_usage"] - mins["unmapped_page_cache_mem_usage"])) + mins[
-                               "unmapped_page_cache_mem_usage"]
-    return df_out, prediction_test_cpu, prediction_test_mem, prediction_train_cpu, prediction_train_mem
+            maxs["canonical_mem_usage"] - mins["canonical_mem_usage"])) + mins[
+                              "canonical_mem_usage"]
+    return prediction_test_cpu, prediction_test_mem
+
+
+def denormalize_start_time_minMax(time):
+    return (time * (maxs["start_time"] - mins["start_time"])) + mins["start_time"]
 
 
 stds = {}
 means = {}
 
 
-def normalize_data_std(df_train, df, df_test):
-    for c in df_train.columns:
-        mean = np.mean(df[c])
-        std = np.std(df[c])
-        means[c] = mean
-        stds[c] = std
-        df_train.loc[:, c] = (df_train.loc[:, c] - mean) / std
-        df_test.loc[:, c] = (df_test.loc[:, c] - mean) / std
-    return df_train, df_test
+def normalize_data_std(df):
+    pd.options.mode.chained_assignment = None
+    for c in df.columns:
+        if means.get(c) is None:
+            mean = np.mean(df[c])
+            std = np.std(df[c])
+            means[c] = mean
+            stds[c] = std
+        else:
+            mean = means[c]
+            std = stds[c]
+        df.loc[:, c] = (df.loc[:, c] - mean) / std
+    return df
 
 
-def denormalize_data_std(df_out, prediction_test_cpu, prediction_test_mem, prediction_train_cpu,
-                         prediction_train_mem):
-    for c in df_out.columns:
-        mean = means[c]
-        std = stds[c]
-        df_out[c] = (df_out[c] * std) + mean
+def denormalize_data_std(prediction_test_cpu, prediction_test_mem):
     prediction_test_cpu = (prediction_test_cpu * stds["mean_CPU_usage"]) + means["mean_CPU_usage"]
-    prediction_test_mem = (prediction_test_mem * stds["unmapped_page_cache_mem_usage"]) + means[
-        "unmapped_page_cache_mem_usage"]
-    prediction_train_cpu = (prediction_train_cpu * stds["mean_CPU_usage"]) + means["mean_CPU_usage"]
-    prediction_train_mem = (prediction_train_mem * stds["unmapped_page_cache_mem_usage"]) + means[
-        "unmapped_page_cache_mem_usage"]
-    return df_out, prediction_test_cpu, prediction_test_mem, prediction_train_cpu, prediction_train_mem
+    prediction_test_mem = (prediction_test_mem * stds["canonical_mem_usage"]) + means[
+        "canonical_mem_usage"]
+    return prediction_test_cpu, prediction_test_mem
 
 
-def calculate_prediction_results(df_train, df_out, prediction_train_cpu, prediction_train_mem, prediction_test_cpu,
-                                 prediction_test_mem):
+def denormalize_start_std(time):
+    return (time * stds["start_time"]) + means["start_time"]
+
+
+def calculate_prediction_results(prediction_test, actual_test_values, prediction_training, actual_train_values):
     print("TRAIN ERRORS CPU:")
-    start_train_index = sequence_length + n - 1
-    end_train_index = len(df_train)
-    calc_MSE_Accuracy(df_out["mean_CPU_usage"].iloc[start_train_index:end_train_index], prediction_train_cpu)
+    calc_MSE_Accuracy(actual_train_values, prediction_training, 0)
     print("TRAIN ERRORS MEM:")
-    calc_MSE_Accuracy(df_out["unmapped_page_cache_mem_usage"].iloc[start_train_index:end_train_index],
-                      prediction_train_mem)
+    calc_MSE_Accuracy(actual_train_values, prediction_training, 1)
     print("TEST ERRORS CPU:")
-    start_test_index = end_train_index - 1 + sequence_length + n
-    end_test_index = len(df_out)
-    calc_MSE_Accuracy(
-        df_out["mean_CPU_usage"].iloc[start_test_index:end_test_index],
-        prediction_test_cpu)
+    calc_MSE_Accuracy(actual_test_values, prediction_test, 0)
     print("TEST ERRORS MEM:")
-    calc_MSE_Accuracy(
-        df_out["unmapped_page_cache_mem_usage"].iloc[start_test_index:end_test_index],
-        prediction_test_mem)
+    calc_MSE_Accuracy(actual_test_values, prediction_test, 1)
 
 
-def plot_results(index_in_hours, df_train, df_test, prediction_test_cpu, prediction_train_cpu, prediction_test_mem,
-                 prediction_train_mem, df_out):
-    index_test = index_in_hours.iloc[len(df_train) - 1 + sequence_length + n:len(df_train) + len(df_test)]
-    index_train = index_in_hours.iloc[sequence_length + n - 1:len(df_train)]
+def plot_results(predictions, original_test_files, config):
+    in_seconds = 1000000
+    in_minutes = in_seconds * 60
+    in_hours = in_minutes * 60
+    in_days = in_hours * 24
+    actual_test_values = []
+    index_list = []
+    for test_file in original_test_files:
+        # actual results needs to have the same size as the prediction
+        start_train_index = config["sequence_length"] + n - 1
+        test_file.X = test_file.X[start_train_index:]
+        test_file.y = test_file.y[start_train_index:]
+        actual_test_values.append((test_file.y[:, 0], test_file.y[:, 1]))
+        indices = ((denormalize_start_std(
+            test_file.X[:, 0]) - 600000000) / in_hours)  # first index is timestamp
+        index_list.append(indices)
+    fig, axs = plt.subplots(nrows=len(index_list), ncols=2, figsize=(10, 5))
+    for i in range(len(index_list)):
+        if len(index_list) == 1:
+            axs[i].plot(index_list[i], actual_test_values[i][0], label='actual CPU usage', linewidth=1,
+                        markerfacecolor='blue')
+            axs[i].plot(index_list[i], predictions[i][0], label='predicted CPU', linewidth=1, markerfacecolor='red')
+            axs[i].set_xlabel('Time (hours)')
+            axs[i].set_ylabel('CPU prediction')
+            axs[i].set_title('Mean CPU prediction')
+            axs[i].legend()
 
-    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
-    axs[0].plot(index_in_hours, df_out["mean_CPU_usage"].values, label='actual CPU usage', linewidth=1,
-                markerfacecolor='blue')
-    axs[0].plot(index_test, prediction_test_cpu, label='predicted CPU', linewidth=1, markerfacecolor='red')
-    axs[0].plot(index_train, prediction_train_cpu, label='predicted CPU', linewidth=1, markerfacecolor='red')
-    axs[0].set_xlabel('Time (hours)')
-    axs[0].set_ylabel('CPU prediction')
-    axs[0].set_title('Mean CPU prediction')
-    axs[0].legend()
+            axs[1].plot(index_list[i], actual_test_values[i][1], label='actual memory usage', linewidth=1,
+                        markerfacecolor='blue')
+            axs[1].plot(index_list[i], predictions[i][1], label='predicted memory', linewidth=1,
+                        markerfacecolor='red')
+            axs[1].set_xlabel('Time (hours)')
+            axs[1].set_ylabel('Memory prediction')
+            axs[1].set_title('Mean memory prediction')
+            axs[1].legend()
+        else:
+            axs[i][0].plot(index_list[i], actual_test_values[i][0], label='actual CPU usage', linewidth=1,
+                           markerfacecolor='blue')
+            axs[i][0].plot(index_list[i], predictions[i][0], label='predicted CPU', linewidth=1, markerfacecolor='red')
+            axs[i][0].set_xlabel('Time (hours)')
+            axs[i][0].set_ylabel('CPU prediction')
+            axs[i][0].set_title('Mean CPU prediction')
+            axs[i][0].legend()
 
-    axs[1].plot(index_in_hours, df_out["unmapped_page_cache_mem_usage"].values, label='actual memory usage',
-                linewidth=1,
-                markerfacecolor='blue')
-    axs[1].plot(index_test, prediction_test_mem, label='predicted disk IO time', linewidth=1, markerfacecolor='red')
-    axs[1].plot(index_train, prediction_train_mem, label='predicted disk IO time', linewidth=1, markerfacecolor='red')
-    axs[1].set_xlabel('Time (hours)')
-    axs[1].set_ylabel('Mean disk IO time')
-    axs[1].set_title('Disk IO time prediction')
-    axs[1].legend()
-
+            axs[i][1].plot(index_list[i], actual_test_values[i][1], label='actual memory usage', linewidth=1,
+                           markerfacecolor='blue')
+            axs[i][1].plot(index_list[i], predictions[i][1], label='predicted memory', linewidth=1,
+                           markerfacecolor='red')
+            axs[i][1].set_xlabel('Time (hours)')
+            axs[i][1].set_ylabel('Memory prediction')
+            axs[i][1].set_title('Mean memory prediction')
+            axs[i][1].legend()
+    plt.savefig('8_training_sets.png')
     plt.show()
 
 
-def get_test_training_data(df):
-    # split into training and test set - check until what index the training data is
-    test_head = df.index[int(0.8 * len(df))]
-    df_train = df.loc[:test_head - 1, :]
-    df_test = df.loc[test_head:len(df), :]
+def get_prediction_results(test_data_files_sequence, best_trained_model, device, config):
+    prediction_test = []
+    for test_dataset in test_data_files_sequence:
+        test_eval_loader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=1)
+        prediction_test_cpu, prediction_test_mem = predict(test_eval_loader, best_trained_model, device)
+        prediction_test.append(denormalize_data_std(prediction_test_cpu, prediction_test_mem))
+
+    actual_test_values = []
+    for sequence_file in test_data_files_sequence:
+        # actual results needs to have the same size as the prediction
+        start_train_index = config["sequence_length"] + n - 1
+        actual_test_cpu = sequence_file.y[:, 0][start_train_index:]
+        actual__test_mem = sequence_file.y[:, 1][start_train_index:]
+        actual_test_values.append(denormalize_data_std(actual_test_cpu, actual__test_mem))
+    return prediction_test, actual_test_values
+
+
+def get_test_training_data(test_data_files=None, training_data_files=None, config=None):
     # normalize data: this improves model accuracy as it gives equal weights/importance to each variable
-    df_train = df_train.apply(lambda x: savgol_filter(x, 8, 4))
-    df_train, df_test = normalize_data_minMax(df_train, df, df_test)
-    # Create datasets that PyTorch DataLoader can work with
-    train_dataset = SequenceDataset(
-        df_train,
-        target=target,
-        features=features,
-        sequence_length=sequence_length
-    )
-    test_dataset = SequenceDataset(
-        df_test,
-        target=target,
-        features=features,
-        sequence_length=sequence_length
-    )
+    train_sequence_dataset = []
+    test_sequence_dataset = []
+    for df_train in training_data_files:
+        df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))  # todo
+        df_train = normalize_data_std(df_train)
+        train_sequence_dataset.append(SequenceDataset(
+            df_train,
+            target=target,
+            features=features,
+            sequence_length=config["sequence_length"]
+        ))
+    for df_test in test_data_files:
+        df_test = normalize_data_std(df_test)
+        test_sequence_dataset.append(SequenceDataset(
+            df_test,
+            target=target,
+            features=features,
+            sequence_length=config["sequence_length"]
+        ))
 
-    return df_test, df_train, test_dataset, train_dataset
+    return test_sequence_dataset, train_sequence_dataset
 
 
-def train_and_test_model(config, checkpoint_dir="checkpoint", df=None):
-    _, _, test_dataset, train_dataset = get_test_training_data(df)
-    model = RegressionLSTM(num_sensors=len(features), num_hidden_units=config["units"], num_layers=config["layers"],  lin_layers=config["lin_layers"])
+def train_and_test_model(config, checkpoint_dir="checkpoint", test_data_files=None, training_data_files=None):
+    test_sequence_dataset, train_sequence_dataset = get_test_training_data(test_data_files, training_data_files, config)
+    model = RegressionLSTM(num_sensors=len(features), num_hidden_units=config["units"], num_layers=config["layers"],
+                           lin_layers=config["lin_layers"])
     # Wrap the model in nn.DataParallel to support data parallel training on multiple GPUs:
     device = "cpu"
-    if torch.cuda.is_available():
-        device = "cuda:0"
-        if torch.cuda.device_count() > 1:
-            model = nn.DataParallel(model)
+    # if torch.cuda.is_available():
+    #     device = "cuda:0"
+    #     if torch.cuda.device_count() > 1:
+    #         model = nn.DataParallel(model)
     model.to(device)
-
     optimizer = torch.optim.Adam(model.parameters(), lr=config["lr"])
     if checkpoint_dir:
         model_state, optimizer_state = torch.load(
@@ -339,18 +382,28 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", df=None):
         model.load_state_dict(model_state)
         optimizer.load_state_dict(optimizer_state)
     batch_size = config["batch_size"]
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
+    train_loader = []
+    test_loader = []
+    for train_dataset in train_sequence_dataset:
+        train_loader.append(DataLoader(train_dataset, batch_size=batch_size, shuffle=False, num_workers=1))
+    for test_dataset in test_sequence_dataset:
+        test_loader.append(DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=1))
 
-    print("Untrained test\n--------")
-    test_model(test_loader, model, optimizer, 0, device)
     for ix_epoch in range(epochs):
-        print(f"Epoch {ix_epoch}\n---------")
-        train_model(train_loader, model, optimizer=optimizer, device=device)
-        test_model(test_loader, model, optimizer, ix_epoch, device=device)
-        print()
+        # print(model.state_dict())
+        for train_df in train_loader:
+            train_model(train_df, model, optimizer=optimizer, device=device)
+            test_model(train_df, model, optimizer, ix_epoch, device=device)
 
     print("Finished Training")
+
+
+def read_data(path='../training'):
+    filepaths = [path + "/" + f for f in os.listdir(path) if f.endswith('.csv')]
+    df_list = list()
+    for file in filepaths:
+        df_list.append(pd.read_csv(file, sep=","))
+    return df_list
 
 
 def main():
@@ -361,22 +414,25 @@ def main():
         grace_period=50,
         reduction_factor=2)
     reporter = CLIReporter(
-        parameter_columns=["lin_layers", "units", "layers", "lr","batch_size"],
+        # parameter_columns=["lin_layers", "units", "layers", "lr", "batch_size"],
         metric_columns=["loss", "accuracy", "training_iteration"])
+    # first choose lin layers, units, then choose layers and sequence length
     config = {
-        "lin_layers":tune.choice([100, 125, 150, 175]),
-        "units": tune.choice([4, 8, 10]),
-        "layers": tune.choice([2, 3, 4, 5]),
-        "lr": tune.loguniform(0.0006, 0.0004),  # takes lower and upper bound
-        "batch_size": tune.choice([16])
+        "lin_layers": tune.choice([50, 100, 150, 175]),
+        "units": tune.choice([4, 8, 16]),
+        "layers": tune.choice([2, 3]),
+        "lr": tune.loguniform(0.0009, 0.0001),  # takes lower and upper bound
+        "batch_size": tune.choice([16]),
+        "sequence_length": tune.choice([3])  # , 6, 12, 24]),
     }
-    df = pd.read_csv("job_smaller.csv", sep=",")
-
+    training_data_files = read_data("../training")
+    test_data_files = read_data("../test")
     result = tune.run(
-        partial(train_and_test_model, df=df),
-        resources_per_trial={"cpu": 6, "gpu": 0},
+        partial(train_and_test_model, test_data_files=test_data_files, training_data_files=training_data_files),
+        resources_per_trial={"cpu": 1, "gpu": 0},
+        # By default, Tune automatically runs N concurrent trials, where N is the number of CPUs (cores) on your machine.
         config=config,
-        num_samples=1,  # how often I sample from hyperparameters
+        num_samples=24,  # how often I sample from hyperparameters
         scheduler=scheduler,
         progress_reporter=reporter)
 
@@ -393,34 +449,27 @@ def main():
     best_trained_model = RegressionLSTM(num_sensors=len(features), num_hidden_units=best_trial.config["units"],
                                         num_layers=best_trial.config["layers"], lin_layers=lin_layers)
     device = "cpu"
-    if torch.cuda.is_available():
-        device = "cuda:0"
+    # if torch.cuda.is_available():
+    #     device = "cuda:0"
     best_trained_model.to(device)
+    print(device)
 
     best_checkpoint_dir = best_trial.checkpoint.dir_or_data
     model_state, optimizer_state = torch.load(os.path.join(
         best_checkpoint_dir, "checkpoint"))
     best_trained_model.load_state_dict(model_state)
-    df_test, df_train, test_dataset, train_dataset = get_test_training_data(df)
-    train_eval_loader = DataLoader(train_dataset, batch_size=1, shuffle=False)
-    prediction_train = predict(train_eval_loader, best_trained_model, device)
-    test_eval_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
-    prediction_test = predict(test_eval_loader, best_trained_model, device)
-    df_out = pd.concat([df_train, df_test])
-    prediction_test_cpu, prediction_test_mem = prediction_test
-    prediction_train_cpu, prediction_train_mem = prediction_train
-    df_out, prediction_test_cpu, prediction_test_mem, prediction_train_cpu, prediction_train_mem = denormalize_data_minMax(
-        df_out, prediction_test_cpu, prediction_test_mem, prediction_train_cpu, prediction_train_mem)
-    in_seconds = 1000000
-    in_minutes = in_seconds * 60
-    in_hours = in_minutes * 60
-    in_days = in_hours * 24
-    index_in_hours = ((df_out['start_time'] - 600000000) / in_hours)
-
-    calculate_prediction_results(df_train, df_out, prediction_train_cpu, prediction_train_mem, prediction_test_cpu,
-                                 prediction_test_mem)
-    plot_results(index_in_hours, df_train, df_test, prediction_test_cpu, prediction_train_cpu, prediction_test_mem,
-                 prediction_train_mem, df_out)
+    test_data_files_sequence, training_data_files_sequence = get_test_training_data(test_data_files,
+                                                                                    training_data_files,
+                                                                                    best_trial.config)
+    print("Get test results")
+    prediction_test, actual_test_values = get_prediction_results(test_data_files_sequence, best_trained_model, device,
+                                                                 best_trial.config)
+    print("Get training results")
+    prediction_training, actual_train_values = get_prediction_results(training_data_files_sequence, best_trained_model,
+                                                                      device, best_trial.config)
+    print("calculate results")
+    calculate_prediction_results(prediction_test, actual_test_values, prediction_training, actual_train_values)
+    plot_results(prediction_test, test_data_files_sequence, best_trial.config)
 
 
 if __name__ == "__main__":
