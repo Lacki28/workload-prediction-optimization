@@ -9,7 +9,6 @@ import sklearn.metrics as sm
 import torch
 import torch.nn as nn
 from matplotlib import pyplot as plt
-from pandas.core.util.hashing import hash_pandas_object
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
@@ -17,11 +16,10 @@ from scipy.signal import savgol_filter
 from torch.utils.data import Dataset, DataLoader
 
 # hyperparameters
-# sequence_length = 8  # I want to make a prediction based on how many values before
 n = 1  # how many timestamps after I want to predict - example: n=1, sequ =3: x=[1,2,3],y=[4]
 epochs = 500
-features = ['start_time', 'mean_CPU_usage', 'canonical_mem_usage', 'assigned_mem_usage', 'max_mem_usage',
-            'mean_local_disk_space_used', 'max_CPU_usage', 'nr_of_tasks', 'scheduling_class']
+features = ['start_time', 'mean_CPU_usage', 'canonical_mem_usage']
+# , 'assigned_mem_usage', 'max_mem_usage', 'mean_local_disk_space_used', 'max_CPU_usage', 'nr_of_tasks', 'scheduling_class']
 target = ["mean_CPU_usage", 'canonical_mem_usage']
 
 
@@ -54,7 +52,7 @@ class RegressionLSTM(nn.Module):
         self.num_layers = num_layers
         self.lin_layers = lin_layers
         # self.bidirectional = True
-        self.lstm1 = nn.LSTM(
+        self.lstm_cpu = nn.LSTM(
             input_size=num_sensors,  # the number of expected features in the input x
             hidden_size=num_hidden_units,  # The number of features in the hidden state h
             batch_first=True,
@@ -62,18 +60,16 @@ class RegressionLSTM(nn.Module):
             # bidirectional=True,
             num_layers=self.num_layers  # number of layers that have some hidden units
         )
-        self.lstm2 = nn.LSTM(
-            input_size=num_sensors,  # the number of expected features in the input x
-            hidden_size=num_hidden_units,  # The number of features in the hidden state h
+        self.lstm_mem = nn.LSTM(
+            input_size=num_sensors,
+            hidden_size=num_hidden_units,
             batch_first=True,
-            # If True, then the input and output tensors are provided as (batch, seq, feature) instead of (seq, batch, feature)
-            # bidirectional=True,
-            num_layers=self.num_layers  # number of layers that have some hidden units
+            num_layers=self.num_layers
         )
-        self.linear1 = nn.Linear(num_hidden_units, lin_layers)
-        self.linear2 = nn.Linear(num_hidden_units, lin_layers)
-        self.output1 = nn.Linear(lin_layers, 1)
-        self.output2 = nn.Linear(lin_layers, 1)
+        self.linear_cpu = nn.Linear(num_hidden_units, lin_layers)
+        self.linear_mem = nn.Linear(num_hidden_units, lin_layers)
+        self.output_cpu = nn.Linear(lin_layers, 1)
+        self.output_mem = nn.Linear(lin_layers, 1)
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
 
@@ -86,16 +82,16 @@ class RegressionLSTM(nn.Module):
         h0 = torch.zeros(self.num_layers, batch_size, self.hidden_units).requires_grad_()
         c0 = torch.zeros(self.num_layers, batch_size,
                          self.hidden_units).requires_grad_()  # a tensor containing the initial cell state for each element in the batch, of shape (batch, hidden_size).
-        out, (hn, cn) = self.lstm1(x, (h0, c0))  # pass the input sequence and initial states to the lstm
-        out = out[:, -1, :]
-        out11 = self.relu(self.linear1(out))
-        out1 = (self.output1(out11))
+        out_cpu, (hn, cn) = self.lstm_cpu(x, (h0, c0))  # pass the input sequence and initial states to the lstm
+        out_cpu = out_cpu[:, -1, :]
+        out_lin_cpu = self.relu(self.linear_cpu(out_cpu))
+        final_out_cpu = (self.output_cpu(out_lin_cpu))
 
-        out, (hn, cn) = self.lstm2(x, (h0, c0))  # pass the input sequence and initial states to the lstm
-        out = out[:, -1, :]
-        out21 = self.relu(self.linear2(out))
-        out2 = (self.output2(out21))
-        return out1, out2
+        out_mem, (hn, cn) = self.lstm_mem(x, (h0, c0))  # pass the input sequence and initial states to the lstm
+        out_mem = out_mem[:, -1, :]
+        out_lin_mem = self.relu(self.linear_mem(out_mem))
+        final_out_mem = (self.output_mem(out_lin_mem))
+        return final_out_cpu, final_out_mem
 
 
 def mse(prediction, real_value):
@@ -115,7 +111,7 @@ def naive_ratio(prediction, real_value):
     # Compute the sum of the absolute differences
     sum_abs_diff = torch.sum(abs_diff)
     et = (1 / len(prediction)) * sum_abs_diff
-    return et / (et1)
+    return et / et1
 
 
 def my_loss_fn(output, target):
@@ -138,12 +134,12 @@ def test_model(data_loader, model, optimizer, ix_epoch, device):
     with torch.no_grad():  # do not calculate the gradient
         for i, (X, y) in enumerate(data_loader):
             X, y = X.to(device), y.to(device)
-            output1, output2 = model(X)
-            loss1 = my_loss_fn(output1, y[:, 0])
-            loss2 = my_loss_fn(output2, y[:, 1])
+            cpu, mem = model(X)
+            loss1 = my_loss_fn(cpu, y[:, 0])
+            loss2 = my_loss_fn(mem, y[:, 1])
             total_loss = loss1 + loss2
-            acc1 = my_accuracy_fn(output1, y[:, 0])
-            acc2 = my_accuracy_fn(output2, y[:, 1])
+            acc1 = my_accuracy_fn(cpu, y[:, 0])
+            acc2 = my_accuracy_fn(mem, y[:, 1])
             accuracy = acc1 + acc2
     with tune.checkpoint_dir(
             ix_epoch) as checkpoint_dir:  # context manager creates a new directory for each epoch in the tuning process and returns the path to that directory as checkpoint_dir.
@@ -162,9 +158,9 @@ def train_model(data_loader, model, optimizer, device):
     for i, (X, y) in enumerate(data_loader):
         X, y = X.to(device), y.to(device)
         optimizer.zero_grad()  # sets gradients back to zero: when I start the training loop: zero out the gradients so that I can perform this tracking correctly
-        output1, output2 = model(X)
-        loss1 = my_loss_fn(output1, y[:, 0])
-        loss2 = my_loss_fn(output2, y[:, 1])
+        cpu, mem = model(X)
+        loss1 = my_loss_fn(cpu, y[:, 0])
+        loss2 = my_loss_fn(mem, y[:, 1])
         loss = loss1 + loss2
         loss.backward()  # gradients computed
         optimizer.step()  # to proceed gradient descent
@@ -206,22 +202,29 @@ def calc_MSE_Accuracy(y_test, y_test_pred, index):
 
 # normalize data
 mins = {}
-mins["start_time"] = 600000000
 maxs = {}
-maxs["start_time"] = 2505900000000
+
+
+# mins["start_time"] = 600000000
+# maxs["start_time"] = 2505900000000
 
 
 def normalize_data_minMax(df):
     pd.options.mode.chained_assignment = None
+    # find min and max
     for c in df.columns:
         if mins.get(c) is None:
             min = np.min(df[c])
             max = np.max(df[c])
             mins[c] = min
             maxs[c] = max
-        else:
-            min = mins[c]
-            max = maxs[c]
+        elif np.min(df[c]) < mins.get(c):
+            mins[c] = np.min(df[c])
+        elif maxs[c] > maxs.get(c):
+            maxs[c] = maxs.get(c)
+    for c in df.columns:
+        min = mins[c]
+        max = maxs[c]
         value_range = max - min
         df.loc[:, c] = (df.loc[:, c] - min) / value_range
     return df
@@ -407,17 +410,17 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", test_data_files=No
     losses = {}
     for ix_epoch in range(epochs):  # in each epoche, train with the file that performs worse
         for train_df in train_loader:  # random sample
-            # hash_value = hash(train_df.dataset.y)
-            # if hash_value in losses:
-            #     max_key = max(losses, key=lambda k: losses[k])
-            #     if hash_value == max_key:
-            #         train_model(train_df, model, optimizer=optimizer, device=device)
-            #         loss = test_model(train_df, model, optimizer, ix_epoch, device=device)
-            #         losses[hash_value] = loss
-            # else:
-            train_model(train_df, model, optimizer=optimizer, device=device)
-            loss = test_model(train_df, model, optimizer, ix_epoch, device=device)
-                #losses[hash_value] = loss
+            hash_value = hash(train_df.dataset.y)
+            if hash_value in losses:
+                max_key = max(losses, key=lambda k: losses[k])
+                if hash_value == max_key:
+                    train_model(train_df, model, optimizer=optimizer, device=device)
+                    loss = test_model(train_df, model, optimizer, ix_epoch, device=device)
+                    losses[hash_value] = loss
+            else:
+                train_model(train_df, model, optimizer=optimizer, device=device)
+                loss = test_model(train_df, model, optimizer, ix_epoch, device=device)
+                losses[hash_value] = loss
 
     print("Finished Training")
 
@@ -429,6 +432,7 @@ def read_data(path='../training'):
         read_file = pd.read_csv(file, sep=",")
         read_file.index = read_file["start_time"]
         df_list.append(pd.read_csv(file, sep=","))
+        print(read_file)
     return df_list
 
 
