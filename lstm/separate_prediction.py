@@ -23,6 +23,7 @@ features = ['start_time', 'mean_CPU_usage', 'canonical_mem_usage']
 target = ["mean_CPU_usage", 'canonical_mem_usage']
 
 
+# use a sequence of observations for the prediction
 class SequenceDataset(Dataset):
     def __init__(self, dataframe, target, features, sequence_length=5):
         self.features = features
@@ -147,25 +148,23 @@ def test_model(data_loader, model, optimizer, ix_epoch, device):
                             "checkpoint")  # /home/anna/ray_results/train_and_test_model_2023-03-30_10-46-09/train_and_test_model_50fa3_00001_1_batch_size=16,layers=8,lr=0.0014,units=4_2023-03-30_10-46-10/checkpoint_000004/checkpoint
         torch.save((model.state_dict(), optimizer.state_dict()),
                    path)  # The torch.save() function saves the state of the PyTorch model and optimizer as a dictionary containing the state of each object.
-    tune.report(loss=(total_loss), accuracy=(
-        accuracy))  # The tune.report() function is used to report the loss and accuracy of the model to the Ray Tune framework. This function takes a dictionary of metrics as input, where the keys are the names of the metrics and the values are the metric values.
-    return total_loss
+    tune.report(loss=(total_loss / len(data_loader)), accuracy=(
+            accuracy / len(
+        data_loader)))  # The tune.report() function is used to report the loss and accuracy of the model to the Ray Tune framework. This function takes a dictionary of metrics as input, where the keys are the names of the metrics and the values are the metric values.
+    return (total_loss / len(data_loader))
 
 
 def train_model(data_loader, model, optimizer, device):
-    total_loss = 0
     model.train()
     for i, (X, y) in enumerate(data_loader):
         X, y = X.to(device), y.to(device)
-        optimizer.zero_grad()  # sets gradients back to zero: when I start the training loop: zero out the gradients so that I can perform this tracking correctly
         cpu, mem = model(X)
         loss1 = my_loss_fn(cpu, y[:, 0])
         loss2 = my_loss_fn(mem, y[:, 1])
         loss = loss1 + loss2
+        optimizer.zero_grad()  # sets gradients back to zero: when I start the training loop: zero out the gradients so that I can perform this tracking correctly
         loss.backward()  # gradients computed
         optimizer.step()  # to proceed gradient descent
-
-        total_loss += loss.item()
 
 
 def predict(data_loader, model, device):
@@ -284,19 +283,21 @@ def calculate_prediction_results(prediction_test, actual_test_values, prediction
     calc_MSE_Accuracy(actual_test_values, prediction_test, 1)
 
 
-def plot_results(predictions, original_test_files, config):
+def plot_results(predictions, actual_values, original_test_files, config):
     in_seconds = 1000000
     in_minutes = in_seconds * 60
     in_hours = in_minutes * 60
     in_days = in_hours * 24
-    actual_test_values = []
     index_list = []
+    actual_values=actual_values[0]
+    actual_test_values=[]
     for test_file in original_test_files:
         # actual results needs to have the same size as the prediction
         start_train_index = config["sequence_length"] + n - 1
+        actual_values_cpu=actual_values[0]
+        actual_values_mem=actual_values[1]
+        actual_test_values.append((actual_values_cpu,actual_values_mem))
         test_file.X = test_file.X[start_train_index:]
-        test_file.y = test_file.y[start_train_index:]
-        actual_test_values.append((test_file.y[:, 0], test_file.y[:, 1]))
         indices = ((denormalize_start_time_minMax(
             test_file.X[:, 0]) - 600000000) / in_hours)  # first index is timestamp
         index_list.append(indices)
@@ -408,12 +409,14 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", test_data_files=No
     for test_dataset in test_sequence_dataset:
         test_loader.append(DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=1))
     losses = {}
-    for ix_epoch in range(epochs):  # in each epoche, train with the file that performs worse
+    for ix_epoch in range(epochs):  # in each epoch, train with the file that performs worse
         for train_df in train_loader:  # random sample
             hash_value = hash(train_df.dataset.y)
             if hash_value in losses:
                 max_key = max(losses, key=lambda k: losses[k])
                 if hash_value == max_key:
+                    print(hash_value)
+                    print(losses)
                     train_model(train_df, model, optimizer=optimizer, device=device)
                     loss = test_model(train_df, model, optimizer, ix_epoch, device=device)
                     losses[hash_value] = loss
@@ -431,8 +434,7 @@ def read_data(path='../training'):
     for file in filepaths:
         read_file = pd.read_csv(file, sep=",")
         read_file.index = read_file["start_time"]
-        df_list.append(pd.read_csv(file, sep=","))
-        print(read_file)
+        df_list.append(read_file)
     return df_list
 
 
@@ -453,7 +455,7 @@ def main():
         "layers": tune.choice([4]),
         "lr": tune.loguniform(0.00025, 0.0005),  # takes lower and upper bound
         "batch_size": tune.choice([8]),
-        "sequence_length": tune.choice([2])  # , 6, 12, 24]),
+        "sequence_length": tune.choice([3])  # , 6, 12, 24]),
     }
     training_data_files = read_data("../training")
     test_data_files = read_data("../test")
@@ -482,12 +484,12 @@ def main():
     # if torch.cuda.is_available():
     #     device = "cuda:0"
     best_trained_model.to(device)
-    print(device)
 
     best_checkpoint_dir = best_trial.checkpoint.dir_or_data
     model_state, optimizer_state = torch.load(os.path.join(
         best_checkpoint_dir, "checkpoint"))
     best_trained_model.load_state_dict(model_state)
+    # get normalized sequence data
     test_data_files_sequence, training_data_files_sequence = get_test_training_data(test_data_files,
                                                                                     training_data_files,
                                                                                     best_trial.config)
@@ -499,7 +501,7 @@ def main():
                                                                       device, best_trial.config)
     print("calculate results")
     calculate_prediction_results(prediction_test, actual_test_values, prediction_training, actual_train_values)
-    plot_results(prediction_test, test_data_files_sequence, best_trial.config)
+    plot_results(prediction_test, actual_test_values, test_data_files_sequence, best_trial.config)
 
 
 if __name__ == "__main__":
