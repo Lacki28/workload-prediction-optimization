@@ -61,8 +61,7 @@ class RegressionLSTM(nn.Module):
             # bidirectional=True,
             num_layers=self.num_layers  # number of layers that have some hidden units
         )
-        self.linear_cpu = nn.Linear(num_hidden_units, lin_layers)
-        self.output_cpu = nn.Linear(lin_layers, 1)
+        self.output_cpu = nn.Linear(num_hidden_units, 1)
         self.relu = nn.ReLU()
         self.sigmoid = nn.Sigmoid()
 
@@ -77,8 +76,7 @@ class RegressionLSTM(nn.Module):
                          self.hidden_units).requires_grad_()  # a tensor containing the initial cell state for each element in the batch, of shape (batch, hidden_size).
         out_cpu, (hn, cn) = self.lstm_cpu(x, (h0, c0))  # pass the input sequence and initial states to the lstm
         out_cpu = out_cpu[:, -1, :]
-        out_lin_cpu = self.relu(self.linear_cpu(out_cpu))
-        final_out_cpu = (self.output_cpu(out_lin_cpu))
+        final_out_cpu = self.relu(self.output_cpu(out_cpu))
 
         return final_out_cpu
 
@@ -370,6 +368,8 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", test_data_files=No
             if hash_value in losses:
                 max_key = max(losses, key=lambda k: losses[k])
                 if hash_value == max_key:
+                    print(hash_value)
+                    print(losses)
                     train_model(train_df, model, optimizer=optimizer, device=device)
                     loss = test_model(train_df, model, optimizer, ix_epoch, device=device)
                     losses[hash_value] = loss
