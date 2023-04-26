@@ -64,7 +64,7 @@ def main():
     pool.join()
     print(dtw_scores)
     # sort the dictionary by similarity score
-    sorted_dtw_scores = sorted(dtw_scores.items(), key=lambda x: x[1])
+    sorted_dtw_scores  = [(k, v) for k, v in dtw_scores.items()]
     with open('taskallNorm.txt', 'w') as f:
         f.write(str(sorted_dtw_scores) + "\n" + str(files))
     matrix = np.ones((len(files), len(files)))
