@@ -16,8 +16,8 @@ def read_data(path=''):
     for file in filepaths:
         csv = pd.read_csv(file, sep=",", index_col=False)
         if csv["scheduling_class"][1] == 3:
-            df_list.append(normalize_data_minMax(csv))  # [24:])
-            files.append(file[24:])  # [24:])
+            df_list.append(normalize_data_minMax(csv))
+            files.append(file[24:])
     return df_list, files
 
 
@@ -39,12 +39,12 @@ def normalize_data_minMax(df):
     return df
 
 
-def compute_dtw(dtw_scores,df_list, column_name, i, j):
+def compute_dtw(dtw_scores, df_list, column_name, i, j):
     a = df_list[i][["start_time", column_name[0], column_name[1]]].to_numpy()
     b = df_list[j][["start_time", column_name[0], column_name[1]]].to_numpy()
     w = dtw_distance(a, b)
     dtw_scores[(i, j)] = w
-    print("Computation i="+str(i)+", j="+str(j))
+    print("Computation i=" + str(i) + ", j=" + str(j) + " :" + str(w))
 
 
 def main():
@@ -59,12 +59,14 @@ def main():
     pool = multiprocessing.Pool(processes=num_processes)
     for i in range(len(df_list)):
         for j in range(i + 1, len(df_list)):
-            pool.apply_async(compute_dtw, args=(dtw_scores,df_list, column_names, i, j))
+            pool.apply_async(compute_dtw, args=(dtw_scores, df_list, column_names, i, j))
     pool.close()
     pool.join()
     print(dtw_scores)
+    with open('dtw_scores.txt', 'w') as f:
+        f.write(str(dtw_scores) + "\n" + str(files))
     # sort the dictionary by similarity score
-    sorted_dtw_scores  = [(k, v) for k, v in dtw_scores.items()]
+    sorted_dtw_scores = [(k, v) for k, v in dtw_scores.items()]
     with open('taskallNorm.txt', 'w') as f:
         f.write(str(sorted_dtw_scores) + "\n" + str(files))
     matrix = np.ones((len(files), len(files)))
@@ -86,6 +88,7 @@ def main():
     for (i, j), dtw in sorted_dtw_scores:
         print(f"Dataframes {files[i]} and {files[j]} have a DTW distance of {dtw} in column {column_names}")
     print("--- %s seconds ---" % (time.time() - start_time))
+
 
 if __name__ == "__main__":
     main()
