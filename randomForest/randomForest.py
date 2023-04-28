@@ -9,10 +9,10 @@ from sklearn.multioutput import MultiOutputRegressor
 import sklearn.metrics as sm
 
 # hyperparameters
-sequence_length = 5
+sequence_length = 10
 n = 1
 trees = 200
-max_depth = 1
+max_depth = 2
 
 def naive_ratio(prediction, real_value):
     # Compute the absolute difference between corresponding elements of a and b
@@ -42,14 +42,11 @@ def plot_results(data, indices):
     in_minutes = in_seconds * 60
     in_hours = in_minutes * 60
     in_days = in_hours * 24
-    print(len(data))
     index_list = []
     for index in indices:
         index_list.append(((index - 600000000) / in_hours))
-    print(len(index_list))
-    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
+    fig, axs = plt.subplots(nrows=len(data), ncols=2, figsize=(10, 5))
     for i in range(len(index_list)):
-        print(i)
         if(i ==0):
             cpu_pred = np.array(data[i][0])[:, 0]
             memory_pred = np.array(data[i][0])[:, 1]
@@ -122,7 +119,7 @@ def main():
     for (X_test, y_test) in xy_test:
         y_prediction =regressor.predict(X_test)
         data.append((y_prediction, y_test))
-        indices.append(X_test[0:])
+        indices.append(X_test[:,0])
         calc_MSE_Accuracy(y_test, y_prediction)
     plot_results(data, indices)
 
