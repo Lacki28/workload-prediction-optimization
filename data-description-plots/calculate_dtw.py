@@ -49,7 +49,7 @@ def compute_dtw(dtw_scores, df_list, column_name, i, j):
 
 def main():
     start_time = time.time()
-    df_list, files = read_data("./sortedGroupedJobFiles")
+    df_list, files = read_data("../sortedGroupedJobFiles")
     # choose the column to compare
     column_names = ['mean_CPU_usage', 'canonical_mem_usage']
     # calculate DTW distance between the columns of each dataframe
