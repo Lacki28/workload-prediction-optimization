@@ -86,7 +86,7 @@ def main(n=2, sequence_length=12, target="mean_CPU_usage"):
     plt.xticks(rotation=45)  # 'vertical')
     plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
     axs.set_ylabel(target)
-    axs.set_title(target + ' prediction h=' + str(sequence_length) + ', t=' + str(n))
+    axs.set_title('ARIMA ' + target + ' prediction h=' + str(sequence_length) + ', t=' + str(n))
     axs.legend()
     plt.savefig('ARIMA_' + 'h' + str(sequence_length) + '_t' + str(n) + '' + '.png')
     plt.show()

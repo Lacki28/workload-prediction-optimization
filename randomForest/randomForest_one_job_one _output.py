@@ -44,7 +44,7 @@ def plot_results(n, sequence_length, df, y_test, y_prediction, target):
     plt.xticks(rotation=45)#'vertical')
     plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
     axs.set_ylabel(target)
-    axs.set_title(target + ' prediction h=' + str(sequence_length) + ', t=' + str(n))
+    axs.set_title('Random forest ' + target + ' prediction h=' + str(sequence_length) + ', t=' + str(n))
     axs.legend()
     plt.savefig('RF_' + 'h' + str(sequence_length) + '_t' + str(n) + '' + '.png')
     plt.show()
