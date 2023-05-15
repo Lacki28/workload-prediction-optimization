@@ -66,30 +66,6 @@ def calculate_prediction_results(n, prediction_test, actual_test_values, predict
     print("TEST ERRORS CPU:")
     calc_MSE_Accuracy(actual_test_values, prediction_test, n)
 
-
-# def plot_results(sequence_length, n, predictions, test_file):
-#     in_seconds = 1000000
-#     in_minutes = in_seconds * 60
-#     in_hours = in_minutes * 60
-#     in_days = in_hours * 24
-#     # actual results needs to have the same size as the prediction
-#     start_train_index = sequence_length + n - 1
-#     test_file.X = test_file.X[start_train_index:]
-#     test_file.y = test_file.y[start_train_index:]
-#     indices = ((test_file.X[:, 0] - 600000000) / in_hours)  # first index is timestamp
-#     fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(10, 5))
-#     axs.plot(indices, test_file.y, label='actual CPU usage', linewidth=1,
-#              markerfacecolor='blue')
-#     axs.plot(indices, predictions, label='predicted CPU', linewidth=1, markerfacecolor='red')
-#     axs.set_xlabel('Time (hours)')
-#     axs.set_ylabel('CPU prediction')
-#     axs.set_title('Mean CPU prediction')
-#     axs.legend()
-#
-#     plt.savefig('8_training_sets.png')
-#     plt.show()
-
-
 def plot_results(n, sequence_length, df, y_test, y_prediction, target):
     indices = df.index
     indices = indices[int(len(df) * 0.7) + n - 1:]
