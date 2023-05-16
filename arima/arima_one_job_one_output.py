@@ -1,5 +1,7 @@
+import sys
 import warnings
 from datetime import timezone, timedelta
+import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -29,18 +31,29 @@ def naive_ratio(prediction, real_value):
     return et / et1
 
 
-def calc_MSE_Accuracy(y_test, y_test_pred):
+def calc_MSE_Accuracy(y_test, y_test_pred, file_path):
     mae = round(sm.mean_absolute_error(y_test, y_test_pred), 5)
     mse = round(sm.mean_squared_error(y_test, y_test_pred), 5)
     r2 = round(sm.r2_score(y_test, y_test_pred), 5)
-    print("Mean absolute error =", mae)
-    print("Mean squared error =", mse)
-    print("R2 score =", r2)
+    append_to_file(file_path, "Mean absolute error =" + str(mae))
+    append_to_file(file_path, "Mean squared error =" + str(mse))
+    append_to_file(file_path, "R2 score =" + str(r2))
     nr = naive_ratio(y_test_pred, y_test)
-    print("Naive ratio =", nr)
+    append_to_file(file_path, "Naive ratio =" + str(nr))
 
 
-def main(n=2, sequence_length=12, target="mean_CPU_usage"):
+def append_to_file(file_path, content):
+    try:
+        with open(file_path, 'a') as file:
+            file.write(content)
+            file.write('\n')
+    except IOError:
+        print("An error occurred while writing to the file.")
+
+
+def main(n, sequence_length, target):
+    file_path = 'ARIMA.txt'
+    start_time = time.time()
     csv = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",", header=0)
     # set correct index
     csv.index = pd.DatetimeIndex(csv["start_time"])
@@ -57,8 +70,9 @@ def main(n=2, sequence_length=12, target="mean_CPU_usage"):
 
     model = auto_arima(train, maxiter=100)
     order = model.order
-    print("n=" + str(n) + ", sequence length=" + str(sequence_length))
-    print(order)
+    append_to_file(file_path, "n=" + str(n) + ", sequence length=" + str(sequence_length))
+    append_to_file(file_path, str(order))
+    append_to_file(file_path, "--- %s Training seconds ---" % (time.time() - start_time))
     history = train[-sequence_length:].values
     # walk-forward validation
     predictions = list()
@@ -77,7 +91,7 @@ def main(n=2, sequence_length=12, target="mean_CPU_usage"):
     indices = indices[size + n - 1:]
     indices = [str(period) for period in indices]
     # plot forecasts against actual outcomes
-    fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(10,8))
+    fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(10, 8))
 
     plt.subplots_adjust(bottom=0.2)  # Adjust the value as needed
     axs.plot(indices, observations, label='actual ' + target, linewidth=1, color='orange')
@@ -90,8 +104,14 @@ def main(n=2, sequence_length=12, target="mean_CPU_usage"):
     axs.legend()
     plt.savefig('ARIMA_' + 'h' + str(sequence_length) + '_t' + str(n) + '' + '.png')
     plt.show()
-    calc_MSE_Accuracy(observations, predictions)
+    calc_MSE_Accuracy(observations, predictions, file_path)
+    append_to_file(file_path, "--- %s seconds ---" % (time.time() - start_time))
 
 
 if __name__ == "__main__":
-    main()
+    for t in (1, 2, 3, 12):
+        for history in (1, 12, 288):
+            if t == 12 and history == 1:
+                main(t, 24, 'mean_CPU_usage')
+            else:
+                main(t, history, 'mean_CPU_usage')

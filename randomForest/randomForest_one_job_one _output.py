@@ -1,3 +1,4 @@
+import time
 from datetime import timezone, timedelta
 
 import matplotlib.pyplot as plt
@@ -7,6 +8,15 @@ import sklearn.metrics as sm
 import torch
 from matplotlib import ticker
 from sklearn.ensemble import RandomForestRegressor
+
+
+def append_to_file(file_path, content):
+    try:
+        with open(file_path, 'a') as file:
+            file.write(content)
+            file.write('\n')
+    except IOError:
+        print("An error occurred while writing to the file.")
 
 
 def naive_ratio(n, prediction, real_value):
@@ -24,24 +34,27 @@ def naive_ratio(n, prediction, real_value):
     return et / (et1)
 
 
-def calc_MSE_Accuracy(n, y_test, y_test_pred):
-    print("Mean absolute error =", round(sm.mean_absolute_error(y_test, y_test_pred), 5))
-    print("Mean squared error =", round(sm.mean_squared_error(y_test, y_test_pred), 5))
-    print("R2 score =", round(sm.r2_score(y_test, y_test_pred), 5))
+def calc_MSE_Accuracy(n, y_test, y_test_pred, file_path):
+    mae = round(sm.mean_absolute_error(y_test, y_test_pred), 5)
+    mse = round(sm.mean_squared_error(y_test, y_test_pred), 5)
+    r2 = round(sm.r2_score(y_test, y_test_pred), 5)
     nr = naive_ratio(n, torch.from_numpy(y_test_pred), torch.tensor(y_test))
-    print("Naive ratio =", nr)
+    append_to_file(file_path, "Mean absolute error =" + str(mae))
+    append_to_file(file_path, "Mean squared error =" + str(mse))
+    append_to_file(file_path, "R2 score =" + str(r2))
+    append_to_file(file_path, "Naive ratio =" + str(nr))
 
 
 def plot_results(n, sequence_length, df, y_test, y_prediction, target):
     indices = df.index
     indices = indices[int(len(df) * 0.7) + n - 1:]
     indices = [str(period) for period in indices]
-    fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(10,8))
+    fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(10, 8))
     plt.subplots_adjust(bottom=0.2)  # Adjust the value as needed
     axs.plot(indices, y_test[:, 0], label='actual ' + target, linewidth=1, color='orange')
     axs.plot(indices, y_prediction, label='predicted ' + target, linewidth=1, color='blue', linestyle='dashed')
     axs.set_xlabel('Time')
-    plt.xticks(rotation=45)#'vertical')
+    plt.xticks(rotation=45)  # 'vertical')
     plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
     axs.set_ylabel(target)
     axs.set_title('Random forest ' + target + ' prediction h=' + str(sequence_length) + ', t=' + str(n))
@@ -62,9 +75,11 @@ def create_sliding_window(n, sequence_length, x_data, y_data):
 
 
 def main(n=1, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_usage", trees=200, max_depth=3):
+    file_path = 'RF.txt'
+    start_time = time.time()
     df = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",")
-    print("n=" + str(n) + ", sequence length=" + str(sequence_length))
-    print('trees=' + str(trees) + ', max depth=' + str(max_depth))
+    append_to_file(file_path, "n=" + str(n) + ", sequence length=" + str(sequence_length))
+    append_to_file(file_path, 'trees=' + str(trees) + ', max depth=' + str(max_depth))
     # create correct index
     df.index = pd.DatetimeIndex(df["start_time"])
     df.index = df.index.tz_localize(timezone.utc).tz_convert('US/Eastern')
@@ -88,11 +103,20 @@ def main(n=1, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_us
     regressor = RandomForestRegressor(n_estimators=trees, max_depth=max_depth, random_state=0)
     y_train = np.ravel(y_train)  # transform y_train into one dimensional array
     regressor.fit(X_train, y_train)
+    append_to_file(file_path, "--- %s TRAINING seconds ---" % (time.time() - start_time))
     # Predict on new data
     y_prediction = regressor.predict(X_test)
-    calc_MSE_Accuracy(n, y_test, y_prediction)
+    calc_MSE_Accuracy(n, y_test, y_prediction, file_path)
     plot_results(n, sequence_length, df, y_test, y_prediction, target[0])
+    append_to_file(file_path, "--- %s seconds ---" % (time.time() - start_time))
 
 
 if __name__ == "__main__":
-    main()
+    for t in (1, 2, 3, 12):
+        for history in (1, 12, 288):
+            for trees in (150, 200):
+                for max_depth in (2, 3, 4):
+                    if t == 12 and history == 1:
+                        main(t, 24, 'mean_CPU_usage', 'mean_CPU_usage', trees, max_depth)
+                    else:
+                        main(t, history, 'mean_CPU_usage', 'mean_CPU_usage', trees, max_depth)

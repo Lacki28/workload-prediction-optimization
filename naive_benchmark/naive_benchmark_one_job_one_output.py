@@ -1,3 +1,4 @@
+import time
 from datetime import timezone, timedelta
 
 import pandas as pd
@@ -48,23 +49,30 @@ def naive_ratio(n, prediction, real_value):
     et = (1 / len(prediction)) * sum_abs_diff
     return et / (et1)
 
+def append_to_file(file_path, content):
+    try:
+        with open(file_path, 'a') as file:
+            file.write(content)
+            file.write('\n')
+    except IOError:
+        print("An error occurred while writing to the file.")
 
-def calc_MSE_Accuracy(y_test, y_test_pred, n):
+def calc_MSE_Accuracy(y_test, y_test_pred, n, file_path):
     mae = round(sm.mean_absolute_error(y_test, y_test_pred), 5)
     mse = round(sm.mean_squared_error(y_test, y_test_pred), 5)
     r2 = round(sm.r2_score(y_test, y_test_pred), 5)
     nr = naive_ratio(n, y_test_pred, y_test)
-    print("Mean absolute error =", mae)
-    print("Mean squared error =", mse)
-    print("R2 score =", r2)
-    print("Naive ratio =", nr)
+    append_to_file(file_path, "Mean absolute error =" + str(mae))
+    append_to_file(file_path, "Mean squared error =" + str(mse))
+    append_to_file(file_path, "R2 score =" + str(r2))
+    append_to_file(file_path, "Naive ratio =" + str(nr))
 
 
-def calculate_prediction_results(n, prediction_test, actual_test_values, prediction_training, actual_train_values):
-    print("TRAIN ERRORS CPU:")
-    calc_MSE_Accuracy(actual_train_values, prediction_training, n)
-    print("TEST ERRORS CPU:")
-    calc_MSE_Accuracy(actual_test_values, prediction_test, n)
+def calculate_prediction_results(n, prediction_test, actual_test_values, prediction_training, actual_train_values,file_path):
+    append_to_file(file_path, "TRAIN ERRORS CPU:")
+    calc_MSE_Accuracy(actual_train_values, prediction_training, n,file_path)
+    append_to_file(file_path, "TEST ERRORS CPU:")
+    calc_MSE_Accuracy(actual_test_values, prediction_test, n, file_path)
 
 def plot_results(n, sequence_length, df, y_test, y_prediction, target):
     indices = df.index
@@ -118,9 +126,12 @@ def get_test_training_data(sequence_length, features, target, df_test=None, df_t
 # sequence_length - I want to make a prediction based on how many values before
 # n - how many timestamps after I want to predict - example: n=1, sequ =3: x=[1,2,3],y=[4]
 def main(n=1, sequence_length=12, target="mean_CPU_usage", features='mean_CPU_usage'):
+    file_path = 'NB.txt'
+    start_time = time.time()
+
     df = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",")
     # split into training and test set - check until what index the training data is
-    print("n=" + str(n) + ", sequence length=" + str(sequence_length))
+    append_to_file(file_path, "n=" + str(n) + ", sequence length=" + str(sequence_length))
     # create correct index
     df.index = pd.DatetimeIndex(df["start_time"])
     df.index = df.index.tz_localize(timezone.utc).tz_convert('US/Eastern')
@@ -140,9 +151,15 @@ def main(n=1, sequence_length=12, target="mean_CPU_usage", features='mean_CPU_us
     print("Get training results")
     prediction_training, actual_train_values = get_prediction_results(sequence_length, n, training_data_sequence)
     print("calculate results")
-    calculate_prediction_results(n, prediction_test, actual_test_values, prediction_training, actual_train_values)
+    calculate_prediction_results(n, prediction_test, actual_test_values, prediction_training, actual_train_values, file_path)
     plot_results(n, sequence_length, df, test_data_sequence, prediction_test, target)
+    append_to_file(file_path, "--- %s seconds ---" % (time.time() - start_time))
 
 
 if __name__ == "__main__":
-    main()
+    for t in (1, 2, 3, 12):
+        for history in (1, 12, 288):
+            if t == 12 and history == 1:
+                main(t, 24, 'mean_CPU_usage', 'mean_CPU_usage')
+            else:
+                main(t, history, 'mean_CPU_usage', 'mean_CPU_usage')
