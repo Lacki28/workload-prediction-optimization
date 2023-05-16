@@ -1,8 +1,10 @@
 import math
 import os
+import time
 from datetime import timezone, timedelta
 from functools import partial
 
+import numpy as np
 import pandas as pd
 import sklearn.metrics as sm
 import torch
@@ -11,6 +13,7 @@ from matplotlib import pyplot as plt, ticker
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
+from scipy.signal import savgol_filter
 from sklearn.model_selection import KFold
 from torch.utils.data import Dataset, DataLoader
 
@@ -114,6 +117,15 @@ def my_accuracy_fn(output, target):
     return r2
 
 
+def append_to_file(file_path, content):
+    try:
+        with open(file_path, 'a') as file:
+            file.write(content)
+            file.write('\n')
+    except IOError:
+        print("An error occurred while writing to the file.")
+
+
 def test_model(data_loader, model, optimizer, ix_epoch, device):
     model.eval()
     total_loss = 0
@@ -158,15 +170,17 @@ def predict(data_loader, model, device):
     return output1
 
 
-def calc_MSE_Accuracy(n, y_test, y_test_pred):
+def calc_MSE_Accuracy(n, y_test, y_test_pred, file_path):
     mae = round(sm.mean_absolute_error(y_test, y_test_pred), 5)
-    mse = round(sm.mean_squared_error(y_test, y_test_pred), 5)
+    mse = sm.mean_squared_error(y_test, y_test_pred)
     r2 = round(sm.r2_score(y_test, y_test_pred), 5)
     nr = naive_ratio(n, y_test_pred, y_test)
-    print("Mean absolute error =", mae)
-    print("Mean squared error =", mse)
-    print("R2 score =", r2)
-    print("Naive ratio =", nr)
+    append_to_file(file_path, "Mean absolute error =" + str(mae))
+    append_to_file(file_path, "Mean squared error =" + str(mse))
+    append_to_file(file_path, "R2 score =" + str(r2))
+    append_to_file(file_path, "Naive ratio =" + str(nr))
+    append_to_file(file_path,
+                   str(mae) + " & " + str(mse) + " & " + str(r2) + " & " + str(np.round(nr.numpy(), decimals=5)))
 
 
 def normalize_data_minMax(features, df, min_max_dict):
@@ -189,16 +203,16 @@ def denormalize_data_minMax(target, prediction_test):
 
 
 def denormalize_start_time_minMax(time):
-    print(time)
     return (time * (min_max_dict["start_time"]["max"] - min_max_dict["start_time"]["min"])) + \
-        min_max_dict["start_time"]["min"]
+           min_max_dict["start_time"]["min"]
 
 
-def calculate_prediction_results(n, prediction_test, actual_test_values, prediction_training, actual_train_values):
-    print("TRAIN ERRORS CPU:")
-    calc_MSE_Accuracy(n, actual_train_values, prediction_training)
-    print("TEST ERRORS CPU:")
-    calc_MSE_Accuracy(n, actual_test_values, prediction_test)
+def calculate_prediction_results(n, prediction_test, actual_test_values, prediction_training, actual_train_values,
+                                 file_path):
+    append_to_file(file_path, "TRAIN ERRORS CPU:")
+    calc_MSE_Accuracy(n, actual_train_values, prediction_training, file_path)
+    append_to_file(file_path, "TEST ERRORS CPU:")
+    calc_MSE_Accuracy(n, actual_test_values, prediction_test, file_path)
 
 
 def plot_results(n, predictions, actual_values, sequence_length, target, df):
@@ -249,7 +263,7 @@ def get_test_training_data(n, target, features, df_test=None, df_train=None, con
     # normalize data: this improves model accuracy as it gives equal weights/importance to each variable
     get_min_max_values_of_training_data(df_train)
     # first use the filter, then normalize the data
-    # df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
+    df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
     df_train = normalize_data_minMax(features, df_train, min_max_dict)
     train_sequence = SequenceDataset(
         df_train,
@@ -271,7 +285,7 @@ def get_test_training_data(n, target, features, df_test=None, df_train=None, con
 def get_training_sequence(n, target, features, df_train, config):
     get_min_max_values_of_training_data(df_train)
     # first use the filter, then normalize the data
-    # df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
+    df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
     df_train = normalize_data_minMax(features, df_train, min_max_dict)
     return SequenceDataset(
         df_train,
@@ -283,7 +297,7 @@ def get_training_sequence(n, target, features, df_train, config):
 
 
 def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file=None, n=None, epochs=None,
-                         features=None, target=None):
+                         features=None, target=None, file_path=None):
     model = RegressionLSTM(num_sensors=len(features), num_hidden_units=config["units"], num_layers=config["layers"],
                            lin_layers=config["lin_layers"])
     # Wrap the model in nn.DataParallel to support data parallel training on multiple GPUs:
@@ -314,7 +328,6 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
             train_model(train_loader, model, optimizer=optimizer, device=device)
         loss = test_model(validation_loader, model, optimizer, ix_epoch, device=device)
         losses.append(loss)
-        print(ix_epoch)
         if ix_epoch == epochs - 2:
             plt.plot(losses)
             plt.savefig('LSTM_progress.png')
@@ -323,6 +336,10 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
 
 def main(n=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], target=["mean_CPU_usage"],
          num_samples=100):
+    file_path = 'test.txt'
+    append_to_file(file_path, "n=" + str(n) + ", sequence length=" + str(sequence_length))
+    start_time = time.time()
+
     scheduler = ASHAScheduler(
         metric="loss",
         mode="min",
@@ -334,11 +351,11 @@ def main(n=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     # first choose lin layers, units, then choose layers and sequence length
     config = {
         "sequence_length": sequence_length,
-        "units": tune.choice([8, 16, 32, 64, 128]),
-        "layers": tune.choice([1, 2, 3, 4]),
-        "lin_layers": tune.choice([64, 128, 256]),
-        "lr": tune.loguniform(0.00001, 0.009),  # takes lower and upper bound
-        "batch_size": tune.choice([32, 64]),
+        "units": tune.choice([64, 128]),
+        "layers": tune.choice([2, 3]),
+        "lin_layers": tune.choice([256]),
+        "lr": tune.loguniform(0.001, 0.001),  # takes lower and upper bound
+        "batch_size": tune.choice([64]),
     }
     df = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",")
     # split into training and test set - check until what index the training data is
@@ -347,7 +364,7 @@ def main(n=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     df_test = df.iloc[test_head - sequence_length:, :]
     result = tune.run(
         partial(train_and_test_model, training_data_file=df_train, n=n, epochs=epochs, features=features,
-                target=target),
+                target=target, file_path=file_path),
         resources_per_trial={"cpu": 1},
         # By default, Tune automatically runs N concurrent trials, where N is the number of CPUs (cores) on your machine.
         config=config,
@@ -358,9 +375,14 @@ def main(n=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     # retrieve the best trial from a Ray Tune experiment using the get_best_trial() method of the tune.ExperimentAnalysis object.
     # three arguments: the name of the metric to optimize, the direction of optimization ("min" for minimizing the metric or "max" for maximizing it), and the mode for selecting the best trial ("last" for selecting the last trial that achieved the best metric value, or "all" for selecting all trials that achieved the best metric value).
     best_trial = result.get_best_trial("accuracy", "max", "last")
+    append_to_file(file_path, "--- %s TRAINING seconds ---" % round((time.time() - start_time), 2))
     print("Best trial config: {}".format(best_trial.config))
     print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
     print("Best trial final validation accuracy: {}".format(best_trial.last_result["accuracy"]))
+    append_to_file(file_path, " u=" + str(best_trial.config["units"]) + " l=" + str(best_trial.config["layers"]) +
+                   " ll=" + str(best_trial.config["lin_layers"]) + " lr=" + str(
+        round(best_trial.config["lr"], 5)) + " bs=" +
+                   str(best_trial.config["batch_size"]))
 
     best_trained_model = RegressionLSTM(num_sensors=len(features), num_hidden_units=best_trial.config["units"],
                                         num_layers=best_trial.config["layers"],
@@ -371,6 +393,8 @@ def main(n=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     best_trained_model.to(device)
 
     best_checkpoint_dir = best_trial.checkpoint.dir_or_data
+    append_to_file(file_path, str(best_checkpoint_dir))
+
     model_state, optimizer_state = torch.load(os.path.join(
         best_checkpoint_dir, "checkpoint"))
     best_trained_model.load_state_dict(model_state)
@@ -387,10 +411,23 @@ def main(n=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
                                                                       best_trained_model,
                                                                       device, best_trial.config)
     print("calculate results")
-    calculate_prediction_results(n, prediction_test, actual_test_values, prediction_training, actual_train_values)
+    calculate_prediction_results(n, prediction_test, actual_test_values, prediction_training, actual_train_values,
+                                 file_path)
     plot_results(n, prediction_test, actual_test_values, best_trial.config["sequence_length"],
                  target[0], df)
+    append_to_file(file_path, "--- %s seconds ---" % round((time.time() - start_time), 2))
 
 
 if __name__ == "__main__":
-    main()
+    for t in (1, 2, 3, 12):
+        for history in (1, 12, 288):
+            for trees in (150, 200):
+                for max_depth in (2, 3, 4):
+                    if t == 12 and history == 1:
+                        main(n=t, sequence_length=24, epochs=500, features=['mean_CPU_usage'],
+                             target=["mean_CPU_usage"],
+                             num_samples=12)
+                    else:
+                        main(n=t, sequence_length=history, epochs=500, features=['mean_CPU_usage'],
+                             target=["mean_CPU_usage"],
+                             num_samples=12)
