@@ -1,25 +1,24 @@
-import sys
+import time
 import warnings
 from datetime import timezone, timedelta
-import time
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import sklearn.metrics as sm
-from matplotlib import pyplot, ticker
+from matplotlib import ticker
 from numpy import array
 from pmdarima import auto_arima
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tsa.arima.model import ARIMA
 
 
-def naive_ratio(prediction, real_value):
+def naive_ratio(t, prediction, real_value):
     prediction = array(prediction)
     real_value = array(real_value)
     # Compute the absolute difference between corresponding elements of a and b
-    prediction_nr = prediction[1:]
-    real_value_nr = real_value[:-1]
+    prediction_nr = prediction[t:]
+    real_value_nr = real_value[:-t]
     abs_diff_et1 = np.abs(prediction_nr - real_value_nr)
     # Compute the sum of the absolute differences
     sum_abs_diff_et1 = np.sum(abs_diff_et1)
@@ -31,15 +30,16 @@ def naive_ratio(prediction, real_value):
     return et / et1
 
 
-def calc_MSE_Accuracy(y_test, y_test_pred, file_path):
+def calc_MSE_Accuracy(t, y_test, y_test_pred, file_path, start_time, training_time):
     mae = round(sm.mean_absolute_error(y_test, y_test_pred), 5)
-    mse = round(sm.mean_squared_error(y_test, y_test_pred), 5)
+    mse = sm.mean_squared_error(y_test, y_test_pred)
     r2 = round(sm.r2_score(y_test, y_test_pred), 5)
-    append_to_file(file_path, "Mean absolute error =" + str(mae))
-    append_to_file(file_path, "Mean squared error =" + str(mse))
-    append_to_file(file_path, "R2 score =" + str(r2))
-    nr = naive_ratio(y_test_pred, y_test)
-    append_to_file(file_path, "Naive ratio =" + str(nr))
+    nr = naive_ratio(t, y_test_pred, y_test)
+    append_to_file(file_path, "mae & mse & r2 & nr & training & total")
+    append_to_file(file_path,
+                   str(mae) + " & " + str(mse) + " & " + str(r2) + " & " + str(
+                       np.round(nr, decimals=5)) + " & " + str(training_time) + " & " + str(
+                       round((time.time() - start_time), 2)))
 
 
 def append_to_file(file_path, content):
@@ -51,7 +51,26 @@ def append_to_file(file_path, content):
         print("An error occurred while writing to the file.")
 
 
-def main(n, sequence_length, target):
+def plot_results(t, sequence_length, csv, observations, predictions, target, size):
+    indices = csv.index
+    indices = indices[size + t - 1:]
+    indices = [str(period) for period in indices]
+    # plot forecasts against actual outcomes
+    fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(10, 8))
+
+    plt.subplots_adjust(bottom=0.2)  # Adjust the value as needed
+    axs.plot(indices, observations, label='actual ' + target, linewidth=1, color='orange')
+    axs.plot(indices, predictions, label='predicted ' + target, linewidth=1, color='blue', linestyle='dashed')
+    axs.set_xlabel('Time')
+    plt.xticks(rotation=45)  # 'vertical')
+    plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
+    axs.set_ylabel(target)
+    axs.set_title('ARIMA ' + target + ' prediction h=' + str(sequence_length) + ', t=' + str(t))
+    axs.legend()
+    plt.savefig('ARIMA_' + 'h' + str(sequence_length) + '_t' + str(t) + '' + '.png')
+
+
+def main(t, sequence_length, target):
     file_path = 'ARIMA.txt'
     start_time = time.time()
     csv = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",", header=0)
@@ -70,42 +89,25 @@ def main(n, sequence_length, target):
 
     model = auto_arima(train, maxiter=100)
     order = model.order
-    append_to_file(file_path, "n=" + str(n) + ", sequence length=" + str(sequence_length))
+    append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length))
     append_to_file(file_path, str(order))
-    append_to_file(file_path, "--- %s Training seconds ---" % (time.time() - start_time))
+    training_time = round((time.time() - start_time), 2)
     history = train[-sequence_length:].values
     # walk-forward validation
     predictions = list()
     observations = list()
-    for t in range(int(len(test) - n + 1)):
+    for x in range(int(len(test) - t + 1)):
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
         warnings.filterwarnings("ignore", category=UserWarning)
         model = ARIMA(history, order=order)
         model_fit = model.fit()
-        output = model_fit.forecast(steps=n)
+        output = model_fit.forecast(steps=t)
         predictions.append(output[0])
-        observations.append(test.iloc[t + n - 1][target])
-        history = np.append(history, test.iloc[t][target])
+        observations.append(test.iloc[t + t - 1][target])
+        history = np.append(history, test.iloc[x][target])
         history = history[-sequence_length:]
-    indices = csv.index
-    indices = indices[size + n - 1:]
-    indices = [str(period) for period in indices]
-    # plot forecasts against actual outcomes
-    fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(10, 8))
-
-    plt.subplots_adjust(bottom=0.2)  # Adjust the value as needed
-    axs.plot(indices, observations, label='actual ' + target, linewidth=1, color='orange')
-    axs.plot(indices, predictions, label='predicted ' + target, linewidth=1, color='blue', linestyle='dashed')
-    axs.set_xlabel('Time')
-    plt.xticks(rotation=45)  # 'vertical')
-    plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
-    axs.set_ylabel(target)
-    axs.set_title('ARIMA ' + target + ' prediction h=' + str(sequence_length) + ', t=' + str(n))
-    axs.legend()
-    plt.savefig('ARIMA_' + 'h' + str(sequence_length) + '_t' + str(n) + '' + '.png')
-    plt.show()
-    calc_MSE_Accuracy(observations, predictions, file_path)
-    append_to_file(file_path, "--- %s seconds ---" % (time.time() - start_time))
+    calc_MSE_Accuracy(t, observations, predictions, file_path, start_time, training_time)
+    plot_results(t, sequence_length, csv, observations, predictions, target, size)
 
 
 if __name__ == "__main__":
