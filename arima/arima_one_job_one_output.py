@@ -103,7 +103,7 @@ def main(t, sequence_length, target):
         model_fit = model.fit()
         output = model_fit.forecast(steps=t)
         predictions.append(output[0])
-        observations.append(test.iloc[t + t - 1][target])
+        observations.append(test.iloc[x + t - 1][target])
         history = np.append(history, test.iloc[x][target])
         history = history[-sequence_length:]
     calc_MSE_Accuracy(t, observations, predictions, file_path, start_time, training_time)
