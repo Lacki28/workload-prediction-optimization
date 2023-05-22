@@ -137,7 +137,7 @@ def main(t=1, sequence_length=12, target="mean_CPU_usage", features='mean_CPU_us
 
     df = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",")
     # split into training and test set - check until what index the training data is
-    append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length))
+    append_to_file(file_path, "t=" + str(t) + ", sequence length=1/12/72")
     # create correct index
     df.index = pd.DatetimeIndex(df["start_time"])
     df.index = df.index.tz_localize(timezone.utc).tz_convert('US/Eastern')
@@ -164,9 +164,6 @@ def main(t=1, sequence_length=12, target="mean_CPU_usage", features='mean_CPU_us
 
 
 if __name__ == "__main__":
-    for t in (1, 2, 3, 12):
-        for history in (1, 12, 288):
-            if t == 12 and history == 1:
-                main(t, 24, 'mean_CPU_usage', 'mean_CPU_usage')
-            else:
-                main(t, history, 'mean_CPU_usage', 'mean_CPU_usage')
+    for t in (1, 2, 3, 6):
+        #for history in (1, 12, 72):
+        main(t, 1, 'mean_CPU_usage', 'mean_CPU_usage')
