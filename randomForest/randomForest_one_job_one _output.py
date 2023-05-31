@@ -112,11 +112,8 @@ def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_us
 
 
 if __name__ == "__main__":
-    for t in (1, 2, 3, 12):
-        for history in (1, 12, 288):
+    for t in (1, 2, 3, 6):
+        for history in (1, 12, 72):
             for trees in (150, 200):
                 for max_depth in (2, 3, 4):
-                    if t == 12 and history == 1:
-                        main(t, 24, 'mean_CPU_usage', 'mean_CPU_usage', trees, max_depth)
-                    else:
-                        main(t, history, 'mean_CPU_usage', 'mean_CPU_usage', trees, max_depth)
+                    main(t, history, 'mean_CPU_usage', 'mean_CPU_usage', trees, max_depth)

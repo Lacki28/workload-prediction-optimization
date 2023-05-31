@@ -103,7 +103,7 @@ def main(t, sequence_length, target):
         model_fit = model.fit()
         output = model_fit.forecast(steps=t)
         predictions.append(output[0])
-        observations.append(test.iloc[t + t - 1][target])
+        observations.append(test.iloc[x + t - 1][target])
         history = np.append(history, test.iloc[x][target])
         history = history[-sequence_length:]
     calc_MSE_Accuracy(t, observations, predictions, file_path, start_time, training_time)
@@ -111,9 +111,6 @@ def main(t, sequence_length, target):
 
 
 if __name__ == "__main__":
-    for t in (1, 2, 3, 12):
-        for history in (1, 12, 288):
-            if t == 12 and history == 1:
-                main(t, 24, 'mean_CPU_usage')
-            else:
-                main(t, history, 'mean_CPU_usage')
+    for t in (1, 2, 3, 6):
+        for history in (1, 12, 72):
+            main(t, history, 'mean_CPU_usage')

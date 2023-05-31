@@ -45,7 +45,7 @@ class SequenceDataset(Dataset):
 
 
 class RegressionLSTM(nn.Module):
-    def __init__(self, num_sensors, num_hidden_units, num_layers, t):
+    def __init__(self, num_sensors, num_hidden_units, num_layers, t, dropout):
         super().__init__()
         self.input_size = num_sensors  # this is the number of features
         self.hidden_units = num_hidden_units
@@ -57,6 +57,7 @@ class RegressionLSTM(nn.Module):
             input_size=num_sensors,  # the number of expected features in the input x
             hidden_size=num_hidden_units,  # The number of features in the hidden state h
             batch_first=True,
+            dropout=dropout,
             # If True, then the input and output tensors are provided as (batch, seq, feature) instead of (seq, batch, feature)
             # bidirectional=True,
             num_layers=self.num_layers  # number of layers that have some hidden units
@@ -287,13 +288,10 @@ def get_test_data(t, target, features, df_test=None, config=None):
     return test_sequence
 
 
-losses = list()
-
-
 def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file=None, t=None, epochs=None,
                          features=None, target=None, file_path=None):
     model = RegressionLSTM(num_sensors=len(features), num_hidden_units=config["units"], num_layers=config["layers"],
-                           t=t)
+                           t=t, dropout=0)
     # Wrap the model in nn.DataParallel to support data parallel training on multiple GPUs:
     device = "cpu"
     if torch.cuda.is_available():
@@ -310,6 +308,7 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
     batch_size = config["batch_size"]
     cv = KFold(n_splits=5, shuffle=False)
     training_sequence = get_training_data(t, target, features, training_data_file, config)
+    losses = list()
     for ix_epoch in range(epochs):  # in each epoch, train with the file that performs worse
         for train_index, validation_index in cv.split(training_sequence):
             train_subset = torch.utils.data.Subset(training_sequence, train_index)
@@ -322,8 +321,7 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
         loss = test_model(validation_loader, model, optimizer, ix_epoch, device=device)
         losses.append(loss)
         print(ix_epoch)
-        if ix_epoch % 10 == 0:
-            print(losses)
+        if ix_epoch == epochs / 4:
             plt.plot(losses)
             plt.savefig('LSTM_progress.png')
 
@@ -337,16 +335,16 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         metric="loss",
         mode="min",
         max_t=epochs,
-        grace_period=epochs / 4,
+        grace_period=epochs / 2,
         reduction_factor=2)  # if it is set to 2, then half of the configurations survive each round.
     reporter = CLIReporter(
         metric_columns=["loss", "accuracy", "training_iteration"])
     # first choose lin layers, units, then choose layers and sequence length
     config = {
         "sequence_length": sequence_length,
-        "units": tune.choice([1, 2, 4, 8, 16]),
-        "layers": tune.choice([1, 2, 3, 4]),
-        "lr": tune.loguniform(0.000001, 0.01),  # takes lower and upper bound
+        "units": tune.choice([8, 16, 32]),
+        "layers": tune.choice([4]),
+        "lr": tune.loguniform(0.000001, 0.009),  # takes lower and upper bound
         "batch_size": tune.choice([64]),
     }
     df = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",")
@@ -378,7 +376,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
                    str(best_trial.config["batch_size"]))
 
     best_trained_model = RegressionLSTM(num_sensors=len(features), num_hidden_units=best_trial.config["units"],
-                                        num_layers=best_trial.config["layers"], t=t)
+                                        num_layers=best_trial.config["layers"], t=t, dropout=0)
     device = "cpu"
     if torch.cuda.is_available():
         device = "cuda:0"
@@ -410,16 +408,11 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
 
 if __name__ == "__main__":
-    main(t=2, sequence_length=12, epochs=1000, features=['mean_CPU_usage'],
-         target=["mean_CPU_usage"],
-         num_samples=1)
-    # for t in (1, 2, 3, 12):
-    #     for history in (1, 12):
-    #         if t == 12 and history == 1:
-    #             main(t=t, sequence_length=24, epochs=500, features=['mean_CPU_usage'],
-    #                  target=["mean_CPU_usage"],
-    #                  num_samples=20)
-    #         else:
-    #             main(t=t, sequence_length=history, epochs=500, features=['mean_CPU_usage'],
-    #                  target=["mean_CPU_usage"],
-    #                  num_samples=1)
+    # main(t=2, sequence_length=12, epochs=2000, features=['mean_CPU_usage'],
+    #      target=["mean_CPU_usage"],
+    #      num_samples=12)
+    for t in (1, 2, 3, 12):
+        for history in (1, 12, 72):
+            main(t=t, sequence_length=history, epochs=1000, features=['mean_CPU_usage'],
+                 target=["mean_CPU_usage"],
+                 num_samples=12)
