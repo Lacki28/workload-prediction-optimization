@@ -45,20 +45,20 @@ class SequenceDataset(Dataset):
 
 
 class RegressionLSTM(nn.Module):
-    def __init__(self, num_sensors, num_hidden_units, num_layers, t):
+    def __init__(self, num_sensors, num_hidden_units, num_layers, t, dropout):
         super().__init__()
         self.input_size = num_sensors  # this is the number of features
         self.hidden_units = num_hidden_units
         self.num_layers = num_layers
         self.t = t
 
-        # self.bidirectional = True
         self.lstm_cpu = nn.LSTM(
             input_size=num_sensors,  # the number of expected features in the input x
             hidden_size=num_hidden_units,  # The number of features in the hidden state h
             batch_first=True,
             # If True, then the input and output tensors are provided as (batch, seq, feature) instead of (seq, batch, feature)
             bidirectional=True,
+            dropout=dropout,
             num_layers=self.num_layers  # number of layers that have some hidden units
         )
         self.linear_cpu = nn.Linear(num_hidden_units * 2, 1)
@@ -73,7 +73,7 @@ class RegressionLSTM(nn.Module):
         c0 = torch.zeros(self.num_layers * 2, batch_size,
                          self.hidden_units).requires_grad_()  # a tensor containing the initial cell state for each element in the batch, of shape (batch, hidden_size).
         out_cpu, (hn, cn) = self.lstm_cpu(x, (h0, c0))  # pass the input sequence and initial states to the lstm
-        out_cpu = out_cpu[:, -self.t, :]  # Predicting the last n hidden states
+        out_cpu = out_cpu[:, -1, :]  # Predicting the last n hidden states
         out_lin_cpu = self.linear_cpu(out_cpu)
         return out_lin_cpu
 
@@ -281,7 +281,7 @@ def get_test_data(t, target, features, df_test=None, config=None):
 def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file=None, t=None, epochs=None,
                          features=None, target=None, file_path=None):
     model = RegressionLSTM(num_sensors=len(features), num_hidden_units=config["units"], num_layers=config["layers"],
-                           t=t)
+                           t=t, dropout=0.2)
     # Wrap the model in nn.DataParallel to support data parallel training on multiple GPUs:
     device = "cpu"
     if torch.cuda.is_available():
@@ -298,7 +298,6 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
     batch_size = config["batch_size"]
     cv = KFold(n_splits=5, shuffle=False)
     training_sequence = get_training_data(t, target, features, training_data_file, config)
-    losses = list()
     for ix_epoch in range(epochs):  # in each epoch, train with the file that performs worse
         for train_index, validation_index in cv.split(training_sequence):
             train_subset = torch.utils.data.Subset(training_sequence, train_index)
@@ -309,17 +308,12 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
 
             train_model(train_loader, model, optimizer=optimizer, device=device)
         loss = test_model(validation_loader, model, optimizer, ix_epoch, device=device)
-        losses.append(loss)
-        print(ix_epoch)
-        if ix_epoch == epochs / 4:
-            plt.plot(losses)
-            plt.savefig('LSTM_progress.png')
 
 
 def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], target=["mean_CPU_usage"],
          num_samples=100):
-    file_path = 'test_lstm_bi.txt'
-    append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length))
+    file_path = 'lstm_bi_dropout_final.txt'
+    append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length)+", epochs="+str(epochs))
     start_time = time.time()
 
     scheduler = ASHAScheduler(
@@ -333,10 +327,10 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     # first choose lin layers, units, then choose layers and sequence length
     config = {
         "sequence_length": sequence_length,
-        "units": tune.choice([2, 4, 8, 16, 32]),
-        "layers": tune.choice([1, 2, 3, 4]),
-        "lr": tune.loguniform(0.000001, 0.004),  # takes lower and upper bound
-        "batch_size": tune.choice([64]),
+        "units": tune.choice([16, 32, 64]),
+        "layers": tune.choice([2, 4]),
+        "lr": tune.choice([0.000009, 0.00002]),
+        "batch_size": tune.choice([32, 64]),
     }
     df = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",")
     # split into training and test set - check until what index the training data is
@@ -367,7 +361,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
                    str(best_trial.config["batch_size"]))
 
     best_trained_model = RegressionLSTM(num_sensors=len(features), num_hidden_units=best_trial.config["units"],
-                                        num_layers=best_trial.config["layers"], t=t)
+                                        num_layers=best_trial.config["layers"], t=t, dropout=0.0)
     device = "cpu"
     if torch.cuda.is_available():
         device = "cuda:0"
@@ -399,16 +393,8 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
 
 if __name__ == "__main__":
-    main(t=2, sequence_length=12, epochs=2000, features=['mean_CPU_usage'],
-         target=["mean_CPU_usage"],
-         num_samples=100)
-    # for t in (1, 2, 3, 12):
-    #     for history in (1, 12):
-    #         if t == 12 and history == 1:
-    #             main(t=t, sequence_length=24, epochs=500, features=['mean_CPU_usage'],
-    #                  target=["mean_CPU_usage"],
-    #                  num_samples=20)
-    #         else:
-    #             main(t=t, sequence_length=history, epochs=500, features=['mean_CPU_usage'],
-    #                  target=["mean_CPU_usage"],
-    #                  num_samples=1)
+    for history in (1, 12, 72):
+        for t in (1, 2, 3, 6):
+            main(t=t, sequence_length=history, epochs=500, features=['mean_CPU_usage'],
+                 target=["mean_CPU_usage"],
+                 num_samples=32)

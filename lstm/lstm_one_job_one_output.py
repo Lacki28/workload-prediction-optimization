@@ -287,6 +287,9 @@ def get_test_data(t, target, features, df_test=None, config=None):
     return test_sequence
 
 
+losses = list()
+
+
 def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file=None, t=None, epochs=None,
                          features=None, target=None, file_path=None):
     model = RegressionLSTM(num_sensors=len(features), num_hidden_units=config["units"], num_layers=config["layers"],
@@ -307,7 +310,6 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
     batch_size = config["batch_size"]
     cv = KFold(n_splits=5, shuffle=False)
     training_sequence = get_training_data(t, target, features, training_data_file, config)
-    losses = list()
     for ix_epoch in range(epochs):  # in each epoch, train with the file that performs worse
         for train_index, validation_index in cv.split(training_sequence):
             train_subset = torch.utils.data.Subset(training_sequence, train_index)
@@ -320,10 +322,10 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
         loss = test_model(validation_loader, model, optimizer, ix_epoch, device=device)
         losses.append(loss)
         print(ix_epoch)
-        if ix_epoch == epochs / 2:
+        if ix_epoch % 10 == 0:
+            print(losses)
             plt.plot(losses)
             plt.savefig('LSTM_progress.png')
-
 
 def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], target=["mean_CPU_usage"],
          num_samples=100):
@@ -335,16 +337,16 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         metric="loss",
         mode="min",
         max_t=epochs,
-        grace_period=epochs / 2,
+        grace_period=epochs / 4,
         reduction_factor=2)  # if it is set to 2, then half of the configurations survive each round.
     reporter = CLIReporter(
         metric_columns=["loss", "accuracy", "training_iteration"])
     # first choose lin layers, units, then choose layers and sequence length
     config = {
         "sequence_length": sequence_length,
-        "units": tune.choice([8, 16, 32, 64]),
-        "layers": tune.choice([4, 5, 6, 7]),
-        "lr": tune.loguniform(0.00001, 0.0004),  # takes lower and upper bound
+        "units": tune.choice([1, 2, 4, 8, 16]),
+        "layers": tune.choice([1, 2, 3, 4]),
+        "lr": tune.loguniform(0.000001, 0.01),  # takes lower and upper bound
         "batch_size": tune.choice([64]),
     }
     df = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",")
@@ -408,13 +410,16 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
 
 if __name__ == "__main__":
-    for t in (1, 2, 3, 12):
-        for history in (1, 12, 288):
-            if t == 12 and history == 1:
-                main(t=t, sequence_length=24, epochs=500, features=['mean_CPU_usage'],
-                     target=["mean_CPU_usage"],
-                     num_samples=20)
-            else:
-                main(t=t, sequence_length=history, epochs=500, features=['mean_CPU_usage'],
-                     target=["mean_CPU_usage"],
-                     num_samples=1)
+    main(t=2, sequence_length=12, epochs=1000, features=['mean_CPU_usage'],
+         target=["mean_CPU_usage"],
+         num_samples=1)
+    # for t in (1, 2, 3, 12):
+    #     for history in (1, 12):
+    #         if t == 12 and history == 1:
+    #             main(t=t, sequence_length=24, epochs=500, features=['mean_CPU_usage'],
+    #                  target=["mean_CPU_usage"],
+    #                  num_samples=20)
+    #         else:
+    #             main(t=t, sequence_length=history, epochs=500, features=['mean_CPU_usage'],
+    #                  target=["mean_CPU_usage"],
+    #                  num_samples=1)
