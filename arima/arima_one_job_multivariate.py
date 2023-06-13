@@ -8,9 +8,8 @@ import pandas as pd
 import sklearn.metrics as sm
 from matplotlib import ticker
 from numpy import array
-from pmdarima import auto_arima
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
-from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.vector_ar.var_model import VAR
 
 
 def naive_ratio(t, prediction, real_value):
@@ -51,27 +50,46 @@ def append_to_file(file_path, content):
         print("An error occurred while writing to the file.")
 
 
-def plot_results(t, sequence_length, csv, observations, predictions, target, size):
+def plot_results(t, sequence_length, csv, act_cpu, act_mem, pred_cpu, pred_mem, target, size):
     indices = csv.index
     indices = indices[size + t - 1:]
     indices = [str(period) for period in indices]
     # plot forecasts against actual outcomes
-    fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(10, 8))
 
-    plt.subplots_adjust(bottom=0.2)  # Adjust the value as needed
-    axs.plot(indices, observations, label='actual ' + target, linewidth=1, color='orange')
-    axs.plot(indices, predictions, label='predicted ' + target, linewidth=1, color='blue', linestyle='dashed')
-    axs.set_xlabel('Time')
-    plt.xticks(rotation=45)  # 'vertical')
-    plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
-    axs.set_ylabel(target)
-    axs.set_title('ARIMA ' + target + ' prediction h=' + str(sequence_length) + ', t=' + str(t))
-    axs.legend()
-    plt.savefig('ARIMA_' + 'h' + str(sequence_length) + '_t' + str(t) + '' + '.png')
+    fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 10))
+    axs[0].plot(indices, act_cpu, label='actual ' + target[0], linewidth=1,
+                color='orange')
+    axs[0].plot(indices, pred_cpu, label='predicted ' + target[0], linewidth=1, color='blue', linestyle='dashed')
+    axs[0].set_xlabel('Time')
+    axs[0].set_ylabel(target[0])
+    axs[0].set_title('VAR ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(t))
+    axs[0].legend()
+    axs[0].tick_params(axis='x', rotation=45)  # Rotate x-axis labels
+    axs[0].xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # Set x-axis tick frequency
+
+    axs[1].plot(indices, act_mem, label='actual ' + target[1], linewidth=1,
+                color='orange')
+    axs[1].plot(indices, pred_mem, label='predicted ' + target[1], linewidth=1, color='blue', linestyle='dashed')
+    axs[1].set_xlabel('Time')
+    axs[1].set_ylabel(target[1])
+    axs[1].set_title('VAR ' + target[1] + ' prediction h=' + str(sequence_length) + ', t=' + str(t))
+    axs[1].legend()
+    axs[1].tick_params(axis='x', rotation=45)  # Rotate x-axis labels
+    axs[1].xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # Set x-axis tick frequency
+    plt.savefig('VAR_' + 'h' + str(sequence_length) + '_t' + str(t) + '' + '.png')
+    plt.savefig('VAR_' + 'h' + str(sequence_length) + '_t' + str(t) + '' + '.png')
+
+
+def calculate_prediction_results(t, act_cpu, act_mem, pred_cpu, pred_mem, file_path, start_time, training_time):
+    append_to_file(file_path, "TEST ERRORS CPU:")
+    append_to_file(file_path, "CPU:")
+    calc_MSE_Accuracy(t, act_cpu, pred_cpu, file_path, start_time, training_time)
+    append_to_file(file_path, "MEM:")
+    calc_MSE_Accuracy(t, act_mem, pred_mem, file_path, start_time, training_time)
 
 
 def main(t, sequence_length, target):
-    file_path = 'ARIMA.txt'
+    file_path = 'VARMA.txt'
     start_time = time.time()
     csv = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",", header=0)
     # set correct index
@@ -82,35 +100,37 @@ def main(t, sequence_length, target):
     csv.index = [timestamp.strftime("%Y-%m-%d %H:%M") for timestamp in
                  [first_timestamp + i * increment for i in range(len(csv))]]
 
-    data = csv.loc[:, [target]]
-
+    data = csv.loc[:, target]
     size = int(len(data) * 0.7)
     train, test = data[0:size], data[size:len(data)]
 
-    model = auto_arima(train, maxiter=100)
-    order = model.order
-    append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length))
-    append_to_file(file_path, str(order))
+    append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", sequence length=" + str(
+        sequence_length))
     training_time = round((time.time() - start_time), 2)
-    history = train.head(sequence_length)
+    history = train.tail(sequence_length)
     # walk-forward validation
     predictions = list()
     observations = list()
     for x in range(int(len(test) - t + 1)):
+        history.iloc[0, 1] += 0.00000003
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
         warnings.filterwarnings("ignore", category=UserWarning)
-        model = ARIMA(history, order=order)
+        model = VAR(history)
         model_fit = model.fit()
-        output = model_fit.forecast(steps=t)
-        predictions.append(output)
-        observations.append(test.iloc[x + t - 1][target])
-        history = np.append(history, test.iloc[x][target])
+        output = model_fit.forecast(model_fit.endog, steps=t)
+        predictions.append((output[0, 0], output[0, 1]))
+        ith_entry = test.iloc[x + t - 1]
+        observations.append((ith_entry[target[0]], ith_entry[target[1]]))
+        data_to_add_to_history = data.iloc[size + x:size + x + t]
+        history = pd.concat([history, data_to_add_to_history])
         history = history[-sequence_length:]
-    calc_MSE_Accuracy(t, observations, predictions, file_path, start_time, training_time)
-    plot_results(t, sequence_length, csv, observations, predictions, target, size)
+    act_cpu, act_mem = zip(*observations)
+    pred_cpu, pred_mem = zip(*predictions)
+    calculate_prediction_results(t, act_cpu, act_mem, pred_cpu, pred_mem, file_path, start_time, training_time)
+    plot_results(t, sequence_length, csv, act_cpu, act_mem, pred_cpu, pred_mem, target, size)
 
 
 if __name__ == "__main__":
     for t in (1, 2, 3, 6):
-        for history in (1, 12, 72):
-            main(t, history, 'mean_CPU_usage')
+        for history in (288, 432, 576):  # 72, 288, 576
+            main(t, history, ['mean_CPU_usage', 'canonical_mem_usage'])
