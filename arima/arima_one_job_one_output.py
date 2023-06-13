@@ -102,7 +102,9 @@ def main(t, sequence_length, target):
         model = ARIMA(history, order=order)
         model_fit = model.fit()
         output = model_fit.forecast(steps=t)
-        predictions.append(output)
+        if isinstance(output, pd.Series):
+            output = output.values
+        predictions.append(output[0])
         observations.append(test.iloc[x + t - 1][target])
         history = np.append(history, test.iloc[x][target])
         history = history[-sequence_length:]
