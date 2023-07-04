@@ -15,12 +15,12 @@ from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 from sklearn.model_selection import KFold
 from torch.utils.data import Dataset, DataLoader
-
-from transformer_model import TimeSeriesTransformer
+from torchvision.models.video.mvit import PositionalEncoding
 
 min_max_dict = {}
 
 
+# use a sequence of observations for the prediction
 class SequenceDataset(Dataset):
     def __init__(self, dataframe, target, features, t, sequence_length=5):
         self.features = features
@@ -31,21 +31,72 @@ class SequenceDataset(Dataset):
         self.X = torch.tensor(dataframe[features].values).float()
 
     def __len__(self):
-        return self.X.shape[0] - self.t - self.sequence_length + 1
+        return self.X.shape[0] - self.t
 
     def __getitem__(self, i):
         if i >= self.sequence_length - 1:
             i_start = i - self.sequence_length + 1
             x = self.X[i_start:(i + 1), :]
-            y = self.y[i_start:(i + 1), :]
         else:
             padding = self.X[0].repeat(self.sequence_length - i - 1, 1)
             x = self.X[0:(i + 1), :]
             x = torch.cat((padding, x), 0)
-            y = self.y[0:(i + 1), :]
-            y = torch.cat((padding, y), 0)
+        return x, self.y[i: i + self.t]  # return target n time stamps ahead
 
-        return x, y, self.y[i: i + self.t]  # return target n time stamps ahead
+
+#https://pytorch.org/tutorials/beginner/transformer_tutorial.html
+class PositionalEncoding(nn.Module):
+
+    def __init__(self, d_model: int, max_len: int = 5000):
+        super().__init__()
+        self.dropout = nn.Dropout(p=0.2)
+
+        position = torch.arange(max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        pe = torch.zeros(max_len, 1, d_model)
+        pe[:, 0, 0::2] = torch.sin(position * div_term)
+        pe[:, 0, 1::2] = torch.cos(position * div_term)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        """
+        Arguments:
+            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
+        """
+        x = x + self.pe[:x.size(0)]
+        return self.dropout(x)
+
+
+class TimeSeriesTransformer(nn.Module):
+
+    def __init__(self, input_dim, output_dim, d_model, nhead, dim_feedforward, num_layers, sequence_length):
+        super(TimeSeriesTransformer, self).__init__()
+        self.pos_encoder = PositionalEncoding(d_model)
+        self.embedding = nn.Linear(input_dim, d_model)
+        self.transformer_encoder = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward),
+            num_layers=num_layers
+        )
+
+        self.decoder = nn.Linear(d_model * sequence_length, output_dim)
+
+    def _generate_square_subsequent_mask(self, sz):
+        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+        mask = mask.float()
+        mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+        return mask
+
+    def forward(self, input):
+        batch_size, seq_len, input_dim = input.size()
+        input = input.transpose(0, 1)  # Shape: (seq_len, batch_size, input_dim)
+        input = self.embedding(input)  # Shape: (seq_len, batch_size, d_model)
+        input = self.pos_encoder(input)  # Shape: (seq_len, batch_size, d_model)
+
+        # input = input.view(seq_len, batch_size, -1)  # Shape: (seq_len, batch_size, d_model * input_dim)
+        output = self.transformer_encoder(input)  # Shape: (seq_len, batch_size, d_model)
+        output = output.view(batch_size, -1)  # Shape: (batch_size, seq_len * d_model)
+        output = self.decoder(output)  # Shape: (batch_size, output_dim)
+        return output
 
 
 def mse(prediction, real_value):
@@ -76,6 +127,9 @@ def my_loss_fn(output, target):
 
 
 def my_r2_fn(output, target):
+    output_has_nan = torch.isnan(output).any().item()
+    if output_has_nan:
+        return - math.inf
     r2 = sm.r2_score(target, output)
     if math.isnan(r2):
         return - math.inf
@@ -91,39 +145,20 @@ def append_to_file(file_path, content):
         print("An error occurred while writing to the file.")
 
 
-def push_to_tensor(decoder_input, output):
-    # remove first element of the decoder input
-    decoder_input = decoder_input[:, 1:]
-    # get the first element of the output - of the prediction of one timestamp ahead
-    first_elements = output[:, 0]
-    first_elements = first_elements.unsqueeze(1)
-    # replace the last element with the last element of the output
-    return torch.cat((decoder_input, first_elements.unsqueeze(1)), dim=1)
-
-
 def test_model(data_loader, model, optimizer, ix_epoch, device, t):
-    print("here")
     model.eval()
     loss_cpu = 0
     r2 = 0
-    first_it = 0
-    decoder_input = torch.ones([1, 24, 1])
     with torch.no_grad():  # do not calculate the gradient
-        for x_enc, x_dec, target in data_loader:
-            print("WHY")
-            print(x_enc)
-            print(x_dec)
-            print(target)
-            x_enc, x_dec, target = x_enc.to(device), x_dec.to(device), target.to(device)
-            if first_it == 0:
-                decoder_input = x_dec
-                first_it = first_it + 1
-            else:
-                decoder_input = push_to_tensor(decoder_input, out)
-            out = model.forward(x_enc.float(), decoder_input.float(), training=False)
-            target = torch.squeeze(target)
-            loss_cpu += my_loss_fn(out, target)
-            r2_cpu = my_r2_fn(out, target)
+        for i, (X, y) in enumerate(data_loader):
+            X, y = X.to(device), y.to(device)
+            cpu = model(X)
+            desired_shape = (len(cpu), t)
+            actual_cpu = y[..., 0]
+            actual_cpu = actual_cpu.view(desired_shape)
+
+            loss_cpu += my_loss_fn(cpu, actual_cpu)
+            r2_cpu = my_r2_fn(cpu, actual_cpu)
             r2 = r2_cpu
     with tune.checkpoint_dir(
             ix_epoch) as checkpoint_dir:  # context manager creates a new directory for each epoch in the tuning process and returns the path to that directory as checkpoint_dir.
@@ -138,27 +173,27 @@ def test_model(data_loader, model, optimizer, ix_epoch, device, t):
 
 def train_model(data_loader, model, optimizer, device, t):
     model.train()
-    for x_enc, x_dec, target in data_loader:
-        x_enc, x_dec, target = x_enc.to(device), x_dec.to(device), target.to(device)
-        out = model.forward(x_enc.float(), x_dec.float(), training=True)
-        target = torch.squeeze(target)
-        loss = my_loss_fn(out.double(), target.double())
+    for i, (X, y) in enumerate(data_loader):
+        X, y = X.to(device), y.to(device)
         optimizer.zero_grad()  # sets gradients back to zero: when I start the training loop: zero out the gradients so that I can perform this tracking correctly
-        loss.backward()
-        optimizer.step()
+        cpu = model(X)
+        desired_shape = (len(cpu), t)  # should be same as batch size, but in case data%batch size isn't 0, we need this
+        actual_cpu = y[..., 0]
+        actual_cpu = actual_cpu.view(desired_shape)
+        loss = my_loss_fn(cpu, actual_cpu)
+        loss.backward()  # gradients computed
+        optimizer.step()  # to proceed gradient descent
 
 
 def predict(data_loader, model, device):
     cpu = torch.tensor([])
     model.eval()
-    with torch.no_grad():  # do not calculate the gradient
-        for x_enc, x_dec, target in data_loader:
-            x_enc, x_dec, target = x_enc.to(device), x_dec.to(device), target.to(device)
-            x_dec = x_dec.unsqueeze(-1)
-            # Forecast
-            out = model.forward(x_enc.float(), x_dec.float(), training=False)
-            cpu = torch.cat((cpu, out), 0)
-
+    with torch.no_grad():
+        for i, (X, y) in enumerate(data_loader):
+            X, y = X.to(device), y.to(device)
+            y_prediction_cpu = model(X)
+            cpu = torch.cat((cpu, y_prediction_cpu), 0)
+    return cpu
 
 
 def calc_MSE_Accuracy(t, y_test, y_test_pred, file_path, start_time, training_time):
@@ -230,9 +265,9 @@ def plot_results(t, predictions_cpu, actual_values_cpu, sequence_length, target,
         plt.xticks(rotation=45)  # 'vertical')
         plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
         axs.set_ylabel(target[0])
-        axs.set_title('LSTM ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(i + 1))
+        axs.set_title('Transformer ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(i + 1))
         axs.legend()
-        plt.savefig('LSTM_bi_directional_' + 'h' + str(sequence_length) + '_t' + str(i + 1) + '' + '.png')
+        plt.savefig('Transformer_' + 'h' + str(sequence_length) + '_t' + str(i + 1) + '' + '.png')
 
 
 def get_prediction_results(t, target, test_dataset, best_trained_model, device, config):
@@ -286,9 +321,9 @@ def get_test_data(t, target, features, df_test=None, config=None):
 
 def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file=None, t=None, epochs=None,
                          features=None, target=None, file_path=None):
-    model = TimeSeriesTransformer(len(features), config["dim_attn"], config["input_feat_enc"], config["input_feat_dec"],
-                                  config["sequence_length"], config["n_decoder_layers"], config["n_encoder_layers"],
-                                  config["n_heads"], t, device="cpu")
+    model = TimeSeriesTransformer(len(features), t, config["d_model"], config["nhead"],
+                                  config["dim_feedforward"], config["num_layers"], config["sequence_length"])
+
     # Wrap the model in nn.DataParallel to support data parallel training on multiple GPUs:
     device = "cpu"
     if torch.cuda.is_available():
@@ -311,7 +346,7 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
             val_subset = torch.utils.data.Subset(training_sequence, validation_index)
 
             train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=False)
-            validation_loader = DataLoader(val_subset, batch_size=1, shuffle=False)
+            validation_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False)
 
             train_model(train_loader, model, optimizer=optimizer, device=device, t=t)
         test_model(validation_loader, model, optimizer, ix_epoch, device=device, t=t)
@@ -319,7 +354,7 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
 
 def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], target=["mean_CPU_usage"],
          num_samples=100):
-    file_path = 'lstm_univariate_bidirectional_all_at_once.txt'
+    file_path = 'transformer_univariate.txt'
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", epochs=" + str(epochs))
     start_time = time.time()
     scheduler = ASHAScheduler(
@@ -330,21 +365,16 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         reduction_factor=2)  # if it is set to 2, then half of the configurations survive each round.
     reporter = CLIReporter(
         metric_columns=["loss", "r2", "training_iteration"])
-    # grid_search
     config = {
-        "dim_val": tune.choice([128, 256, 512, ]),
-        "dim_attn": tune.choice([16, 32]),
-        "input_feat_enc": (len(features)),
-        "input_feat_dec": (len(features)),
         "sequence_length": sequence_length,
-        "n_decoder_layers": tune.choice([2, 4,8]),
-        "n_encoder_layers": tune.choice([2, 4,8]),
-        "n_heads": tune.choice([4, 8, 16]),
-        "lr": tune.loguniform(0.0001, 0.01),  # takes lower and upper bound
-        "batch_size": tune.choice([8, 6, 32]),
+        "d_model": tune.grid_search([16, 32]),
+        "nhead": tune.grid_search([1]),
+        "dim_feedforward": tune.grid_search([16, 32]),
+        "num_layers": tune.grid_search([1, 2]),
+        "lr": tune.loguniform(0.00001, 0.0009),  # takes lower and upper bound
+        "batch_size": tune.grid_search([4, 8, 16]),
     }
-
-    df = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",")
+    df = pd.read_csv("../../sortedGroupedJobFiles/3418324.csv", sep=",")
     # split into training and test set - check until what index the training data is
     test_head = int(len(df) * 0.7)
     df_train = df.iloc[:test_head, :]
@@ -370,20 +400,17 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
     print("Best trial final validation r2: {}".format(best_trial.last_result["r2"]))
     append_to_file(file_path,
-                   "dv=" + str(best_trial.config["dim_val"]) + ", da=" + str(best_trial.config["dim_attn"]) +
-                   ", ife=" + str(best_trial.config["input_feat_enc"]) + ", ifd=" + str(
-                       best_trial.config["input_feat_dec"]) + ", sl=" + str(best_trial.config["sequence_length"]) +
-                   ", nel=" + str(best_trial.config["n_encoder_layers"]) + ", ndl=" + str(
-                       best_trial.config["n_decoder_layers"]) + ", nh=" + str(
-                       best_trial.config["n_heads"]) + ", lr=" + str(round(best_trial.config["lr"], 5)) + ", bs=" +
-                   str(best_trial.config["batch_size"]))
+                   "dm=" + str(best_trial.config["d_model"]) + ", nh=" + str(
+                       best_trial.config["nhead"]) + ", lr=" + str(
+                       round(best_trial.config["lr"], 5)) + ", bs=" +
+                   str(best_trial.config["batch_size"]) + ", df=" +
+                   str(best_trial.config["dim_feedforward"]) + ", nl=" +
+                   str(best_trial.config["num_layers"]))
 
-    best_trained_model = TimeSeriesTransformer(len(features), best_trial.config["dim_attn"],
-                                               best_trial.config["input_feat_enc"], best_trial.config["input_feat_dec"],
-                                               best_trial.config["sequence_length"],
-                                               best_trial.config["n_decoder_layers"],
-                                               best_trial.config["n_encoder_layers"], best_trial.config["n_heads"], t,
-                                               device="cpu")
+    best_trained_model = TimeSeriesTransformer(len(features), t, best_trial.config["d_model"],
+                                               best_trial.config["nhead"], best_trial.config["dim_feedforward"],
+                                               best_trial.config["num_layers"], sequence_length)
+
     device = "cpu"
     # if torch.cuda.is_available():
     #     device = "cuda:0"
@@ -414,5 +441,6 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
 
 if __name__ == "__main__":
-    main(t=6, sequence_length=6, epochs=100, features=['mean_CPU_usage'],
-         target=['mean_CPU_usage'], num_samples=1)
+    # for history in (1, 2, 6, 12):
+    main(t=6, sequence_length=6, epochs=200, features=['mean_CPU_usage'],
+         target=['mean_CPU_usage'], num_samples=2)
