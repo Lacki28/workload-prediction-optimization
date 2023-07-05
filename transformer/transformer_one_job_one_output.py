@@ -44,34 +44,11 @@ class SequenceDataset(Dataset):
         return x, self.y[i: i + self.t]  # return target n time stamps ahead
 
 
-#https://pytorch.org/tutorials/beginner/transformer_tutorial.html
-class PositionalEncoding(nn.Module):
-
-    def __init__(self, d_model: int, max_len: int = 5000):
-        super().__init__()
-        self.dropout = nn.Dropout(p=0.2)
-
-        position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
-        pe = torch.zeros(max_len, 1, d_model)
-        pe[:, 0, 0::2] = torch.sin(position * div_term)
-        pe[:, 0, 1::2] = torch.cos(position * div_term)
-        self.register_buffer('pe', pe)
-
-    def forward(self, x):
-        """
-        Arguments:
-            x: Tensor, shape ``[seq_len, batch_size, embedding_dim]``
-        """
-        x = x + self.pe[:x.size(0)]
-        return self.dropout(x)
-
 
 class TimeSeriesTransformer(nn.Module):
 
     def __init__(self, input_dim, output_dim, d_model, nhead, dim_feedforward, num_layers, sequence_length):
         super(TimeSeriesTransformer, self).__init__()
-        self.pos_encoder = PositionalEncoding(d_model)
         self.embedding = nn.Linear(input_dim, d_model)
         self.transformer_encoder = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward),
@@ -80,19 +57,11 @@ class TimeSeriesTransformer(nn.Module):
 
         self.decoder = nn.Linear(d_model * sequence_length, output_dim)
 
-    def _generate_square_subsequent_mask(self, sz):
-        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-        mask = mask.float()
-        mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-        return mask
-
     def forward(self, input):
         batch_size, seq_len, input_dim = input.size()
         input = input.transpose(0, 1)  # Shape: (seq_len, batch_size, input_dim)
         input = self.embedding(input)  # Shape: (seq_len, batch_size, d_model)
-        input = self.pos_encoder(input)  # Shape: (seq_len, batch_size, d_model)
 
-        # input = input.view(seq_len, batch_size, -1)  # Shape: (seq_len, batch_size, d_model * input_dim)
         output = self.transformer_encoder(input)  # Shape: (seq_len, batch_size, d_model)
         output = output.view(batch_size, -1)  # Shape: (batch_size, seq_len * d_model)
         output = self.decoder(output)  # Shape: (batch_size, output_dim)
@@ -354,7 +323,7 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
 
 def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], target=["mean_CPU_usage"],
          num_samples=100):
-    file_path = 'transformer_univariate.txt'
+    file_path = 'transformer_univariate_tests.txt'
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", epochs=" + str(epochs))
     start_time = time.time()
     scheduler = ASHAScheduler(
@@ -370,7 +339,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         "d_model": tune.grid_search([16, 32]),
         "nhead": tune.grid_search([1]),
         "dim_feedforward": tune.grid_search([16, 32]),
-        "num_layers": tune.grid_search([1, 2]),
+        "num_layers": tune.grid_search([1]),
         "lr": tune.loguniform(0.00001, 0.0009),  # takes lower and upper bound
         "batch_size": tune.grid_search([4, 8, 16]),
     }
@@ -441,6 +410,6 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
 
 if __name__ == "__main__":
-    # for history in (1, 2, 6, 12):
-    main(t=6, sequence_length=6, epochs=200, features=['mean_CPU_usage'],
-         target=['mean_CPU_usage'], num_samples=2)
+    for history in (1, 6, 12):
+        main(t=6, sequence_length=h, epochs=200, features=['mean_CPU_usage'],
+             target=['mean_CPU_usage'], num_samples=2)
