@@ -105,7 +105,7 @@ def normalize_data_minMax(features, df):
     return df
 
 
-def append_results_to_file(act_cpu, pred_cpu, file_path, start_time, t):
+def calculate_prediction_results(t, pred_cpu, act_cpu, start_time,file_path):
     for job_index in range(len(act_cpu)):
         append_to_file(file_path, str(t) + " timestamp ahead prediction")
 
@@ -113,11 +113,6 @@ def append_results_to_file(act_cpu, pred_cpu, file_path, start_time, t):
         current_pred_cpu_train = pred_cpu[job_index].values
 
         calc_MSE_Accuracy(t, current_act_cpu_train, current_pred_cpu_train, file_path, start_time)
-
-def calculate_prediction_results(t, pred_cpu_test, act_cpu_test, pred_cpu_train, act_cpu_train, file_path, start_time):
-    append_results_to_file(act_cpu_test, pred_cpu_test, "test.txt", start_time, t)
-    append_results_to_file(act_cpu_train, pred_cpu_train, "training.txt", start_time, t)
-
 
 def plot_results(t, predictions_cpu, actual_values_cpu, sequence_length, target,
                  df):
@@ -153,9 +148,6 @@ def get_prediction_results(sequence_length, t, test_datasets,target):
     for test_dataset in test_datasets:
         # in a naive model - the prediction = the last actual value of the sequence
         start_train_index = sequence_length + t - 1
-        print(test_dataset[target])
-        print(test_dataset[target][start_train_index - t:-t])
-        print(test_dataset[target][start_train_index:])
         prediction_test_cpu = test_dataset[target][start_train_index - t:-t]
         prediction_test_cpus.append(prediction_test_cpu)
         # actual results needs to have the same size as the prediction
@@ -165,23 +157,15 @@ def get_prediction_results(sequence_length, t, test_datasets,target):
     return prediction_test_cpus, actual_test_cpus
 
 
-def read_file_names(file_path, path, nr_0, nr_1):
-    dir = "~/Documents/pythonScripts/" + path + "/0/"
+def read_file_names(file_path, path, index_start, index_end):
+    dir = "~/Documents/pythonScripts/" + path + "/"
     expanded_path = os.path.expanduser(dir)
     g0 = os.listdir(expanded_path)
-    g0 = g0[:nr_0]
+    g0 = g0[index_start: index_end]
     g0_files = [expanded_path + filename for filename in g0]
-    append_to_file(file_path, "jobs group 0")
+    append_to_file(file_path, "jobs group " + path)
     append_to_file(file_path, str(g0))
-    dir = "~/Documents/pythonScripts/" + path + "/1/"
-    expanded_path = os.path.expanduser(dir)
-
-    g1 = os.listdir(expanded_path)
-    g1 = g1[:nr_1]
-    g1_files = [expanded_path + filename for filename in g1]
-    append_to_file(file_path, "jobs group -1")
-    append_to_file(file_path, str(g1))
-    return g0_files + g1_files
+    return g0_files
 
 
 def read_files(training_files):
@@ -195,15 +179,20 @@ def read_files(training_files):
 def main(t,sequence_length, target, features):
     file_path = 'nb.txt'
     start_time = time.time()
-    training_files = read_file_names(file_path, "training", 80, 20)  # 80, 20)
+    training_files = read_file_names(file_path, "0", 0, 50)
     training_files_csv = read_files(training_files)
-    test_files = read_file_names(file_path, "test", 40, 10)  # 40, 10)
+    validation_files = read_file_names(file_path, "0", 50, 100)
+    validation_files_csv = read_files(validation_files)
+    test_files = read_file_names(file_path, "1", 0, 50)
     test_files_csv = read_files(test_files)
+
     pred_cpu_train, act_cpu_train = get_prediction_results(sequence_length, t, training_files_csv, target)
+    pred_cpu_validation, act_cpu_validation = get_prediction_results(sequence_length, t, validation_files_csv, target)
     pred_cpu_test, act_cpu_test = get_prediction_results(sequence_length, t, test_files_csv,target)
 
-    calculate_prediction_results(t, pred_cpu_test, act_cpu_test, pred_cpu_train,
-                                 act_cpu_train, file_path, start_time)
+    calculate_prediction_results(t, pred_cpu_train, act_cpu_train, start_time, "train.txt")
+    calculate_prediction_results(t, pred_cpu_test, act_cpu_test, start_time, "test.txt")
+    calculate_prediction_results(t, pred_cpu_validation, act_cpu_validation, start_time, "validation.txt")
 
 
 if __name__ == "__main__":

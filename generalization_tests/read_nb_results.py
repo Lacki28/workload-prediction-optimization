@@ -76,10 +76,12 @@ def create_files(file_name):
 
 
 def main():
-    create_files("training")
+    create_files("train")
+    create_files("validation")
     create_files("test")
+    get_avg_loss("train")
+    get_avg_loss("validation")
     get_avg_loss("test")
-    get_avg_loss("training")
 
 
 if __name__ == "__main__":
