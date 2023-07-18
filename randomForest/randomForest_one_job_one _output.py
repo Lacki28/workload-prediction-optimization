@@ -1,6 +1,7 @@
 import time
 from datetime import timezone, timedelta
 
+import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -33,7 +34,13 @@ def naive_ratio(t, prediction, real_value):
     et = (1 / len(prediction)) * sum_abs_diff
     return et / (et1)
 
-
+def calculate_prediction_results(t, pred_cpu_test, act_cpu_test, file_path, start_time,
+                                 training_time):
+    for i in range(t):
+        append_to_file(file_path, str(i + 1) + " timestamp ahead prediction")
+        current_act_cpu_test = act_cpu_test[:, i]
+        current_pred_cpu_test = pred_cpu_test[:, i]
+        calc_MSE_Accuracy(t, current_act_cpu_test, current_pred_cpu_test, file_path, start_time, training_time)
 def calc_MSE_Accuracy(t, y_test, y_test_pred, file_path, start_time, training_time):
     mae = round(sm.mean_absolute_error(y_test, y_test_pred), 5)
     mse = sm.mean_squared_error(y_test, y_test_pred)
@@ -46,22 +53,32 @@ def calc_MSE_Accuracy(t, y_test, y_test_pred, file_path, start_time, training_ti
                        round((time.time() - start_time), 2)))
 
 
-def plot_results(t, sequence_length, df, y_test, y_prediction, target):
-    indices = df.index
+
+def plot_results(t, sequence_length, df, actual_values_cpu, predictions_cpu, target):
+    indices = pd.DatetimeIndex(df["start_time"])
+    indices = indices.tz_localize(timezone.utc).tz_convert('US/Eastern')
+    first_timestamp = indices[0].replace(year=2011, month=5, day=1, hour=19, minute=0)
+    increment = timedelta(minutes=5)
+    indices = [timestamp.strftime("%Y-%m-%d %H:%M") for timestamp in
+               [first_timestamp + i * increment for i in range(len(indices))]]
     indices = indices[int(len(df) * 0.7) + t - 1:]
     indices = [str(period) for period in indices]
-    fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(10, 8))
-    plt.subplots_adjust(bottom=0.2)  # Adjust the value as needed
-    axs.plot(indices, y_test[:, 0], label='actual ' + target, linewidth=1, color='orange')
-    axs.plot(indices, y_prediction, label='predicted ' + target, linewidth=1, color='blue', linestyle='dashed')
-    axs.set_xlabel('Time')
-    plt.xticks(rotation=45)  # 'vertical')
-    plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
-    axs.set_ylabel(target)
-    axs.set_title('Random forest ' + target + ' prediction h=' + str(sequence_length) + ', t=' + str(t))
-    axs.legend()
-    plt.savefig('rf' + 'h' + str(sequence_length) + '_t' + str(t) + '' + '.png')
-    plt.show()
+
+    for i in range(t):
+        current_predictions_cpu = predictions_cpu[:, i]
+        current_actual_values_cpu = actual_values_cpu[:, i]
+        fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(12, 10))
+        axs.plot(indices, current_actual_values_cpu, label='actual ' + target, linewidth=1, color='orange')
+        axs.plot(indices, current_predictions_cpu, label='predicted ' + target, linewidth=1, color='blue', linestyle='dashed')
+        axs.set_xlabel('Time')
+        plt.xticks(rotation=45)  # 'vertical')
+        plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
+        axs.set_ylabel(target)
+        axs.set_title('Random forest ' + target + ' prediction h=' + str(sequence_length) + ', t=' + str(i+1))
+        axs.legend()
+        plt.savefig('rf' + 'h' + str(sequence_length) + '_t' + str(i+1) + '' + '.png')
+
+
 
 
 def create_sliding_window(t, sequence_length, x_data, y_data):
@@ -69,7 +86,7 @@ def create_sliding_window(t, sequence_length, x_data, y_data):
     y = []
     for i in range(sequence_length, len(x_data) - t + 1):
         X.append(x_data.values[i - sequence_length:i])
-        y.append(y_data.values[i + t - 1])
+        y.append(y_data.values[i:i + t])
     X = np.array(X)
     y = np.array(y)
     return X, y
@@ -78,7 +95,7 @@ def create_sliding_window(t, sequence_length, x_data, y_data):
 def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_usage", trees=200, max_depth=3):
     file_path = 'rf.txt'
     start_time = time.time()
-    df = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",")
+    df = pd.read_csv("../../../sortedGroupedJobFiles/3418324.csv", sep=",")
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length))
     append_to_file(file_path, 'trees=' + str(trees) + ', max depth=' + str(max_depth))
     # create correct index
@@ -102,18 +119,26 @@ def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_us
     X_test = np.reshape(X_test, (samples, sequences * features))
     # X has the size observations[sequences[features]] - it needs to be reshaped to observations[sequences*features]
     regressor = RandomForestRegressor(n_estimators=trees, max_depth=max_depth, random_state=0)
-    y_train = np.ravel(y_train)  # transform y_train into one dimensional array
+    joblib.dump(regressor, 'random_forest_' + str(sequence_length) + '_sequence_length_' + str(t) + '_max_depth_' + str(
+        max_depth) + "_trees_" + str(trees) + '.pkl')
+    # y_train = np.ravel(y_train)  # transform y_train into one dimensional array
+    X_train = X_train.squeeze()
+    y_train = y_train.squeeze()
+    if sequence_length == 1:
+        X_train = [[item] for item in X_train]
     regressor.fit(X_train, y_train)
     training_time = round((time.time() - start_time), 2)
     # Predict on new data
     y_prediction = regressor.predict(X_test)
+    y_test = y_test.squeeze()
+    calculate_prediction_results(t, y_prediction, y_test, file_path, start_time,
+                                training_time)
     calc_MSE_Accuracy(t, y_test, y_prediction, file_path, start_time, training_time)
     plot_results(t, sequence_length, df, y_test, y_prediction, target[0])
 
 
 if __name__ == "__main__":
-    for t in (1, 2, 3, 6):
-        for history in (1, 12, 72):
-            for trees in (150, 200):
-                for max_depth in (2, 3, 4):
-                    main(t, history, 'mean_CPU_usage', 'mean_CPU_usage', trees, max_depth)
+
+    for history in (1, 6, 12):
+        for max_depth in (2, 3, 4):
+            main(6, history, 'mean_CPU_usage', 'mean_CPU_usage', 150, max_depth)

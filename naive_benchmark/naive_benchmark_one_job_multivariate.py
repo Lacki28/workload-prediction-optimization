@@ -98,7 +98,7 @@ def plot_results(t, prediction_test_cpu, prediction_test_mem, actual_test_cpu, a
     axs[0].plot(indices, actual_test_cpu, label='predicted ' + target[0], linewidth=1, color='blue', linestyle='dashed')
     axs[0].set_xlabel('Time')
     axs[0].set_ylabel(target[0])
-    axs[0].set_title('LSTM ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(t))
+    axs[0].set_title('NB ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(t))
     axs[0].legend()
     axs[0].tick_params(axis='x', rotation=45)  # Rotate x-axis labels
     axs[0].xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # Set x-axis tick frequency
@@ -108,11 +108,11 @@ def plot_results(t, prediction_test_cpu, prediction_test_mem, actual_test_cpu, a
     axs[1].plot(indices, actual_test_mem, label='predicted ' + target[1], linewidth=1, color='blue', linestyle='dashed')
     axs[1].set_xlabel('Time')
     axs[1].set_ylabel(target[1])
-    axs[1].set_title('LSTM ' + target[1] + ' prediction h=' + str(sequence_length) + ', t=' + str(t))
+    axs[1].set_title('NB ' + target[1] + ' prediction h=' + str(sequence_length) + ', t=' + str(t))
     axs[1].legend()
     axs[1].tick_params(axis='x', rotation=45)  # Rotate x-axis labels
     axs[1].xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # Set x-axis tick frequency
-    plt.savefig('LSTM_multivariate_bi_directional_' + 'h' + str(sequence_length) + '_t' + str(t) + '' + '.png')
+    plt.savefig('NB_multivariate_' + 'h' + str(sequence_length) + '_t' + str(t) + '' + '.png')
 
 
 def get_prediction_results(sequence_length, t, test_dataset):

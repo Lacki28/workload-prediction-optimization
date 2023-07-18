@@ -1,6 +1,7 @@
 import time
 from datetime import timezone, timedelta
 
+import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -131,6 +132,7 @@ def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_us
     regressor = MultiOutputRegressor(RandomForestRegressor(n_estimators=trees, max_depth=max_depth, random_state=0))
     regressor.fit(X_train, y_train)
     training_time = round((time.time() - start_time), 2)
+    joblib.dump(regressor, 'RF_' + 'h' + str(sequence_length) + '_t' + str(t) + '' + '.pkl')
     # Predict on new data
     y_prediction = regressor.predict(X_test)
     pred_cpu_test = y_prediction[:, 0]
@@ -148,7 +150,6 @@ def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_us
 if __name__ == "__main__":
     for t in (1, 2, 3, 6):
         for history in (1, 12, 72):
-            for trees in (150, 200):
                 for max_depth in (2, 3, 4):
                     main(t, history, ['mean_CPU_usage', 'canonical_mem_usage'],
-                         ['mean_CPU_usage', 'canonical_mem_usage'], trees, max_depth)
+                         ['mean_CPU_usage', 'canonical_mem_usage'], 150, max_depth)

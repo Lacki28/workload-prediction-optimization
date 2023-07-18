@@ -165,5 +165,4 @@ def main(t=1, sequence_length=12, target="mean_CPU_usage", features='mean_CPU_us
 
 if __name__ == "__main__":
     for t in (1, 2, 3, 6):
-        #for history in (1, 12, 72):
         main(t, 1, 'mean_CPU_usage', 'mean_CPU_usage')
