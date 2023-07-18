@@ -43,45 +43,6 @@ class SequenceDataset(Dataset):
             x = torch.cat((padding, x), 0)
         return x, self.y[i: i + self.t]  # return target n time stamps ahead
 
-
-# # https://github.com/sooftware/attentions/blob/master/attentions.py#L22
-# class ScaledDotProductAttention(nn.Module):
-#     """
-#     Scaled Dot-Product Attention proposed in "Attention Is All You Need"
-#     Compute the dot products of the query with all keys, divide each by sqrt(dim),
-#     and apply a softmax function to obtain the weights on the values
-#
-#     Args: dim, mask
-#         dim (int): dimention of attention
-#         mask (torch.Tensor): tensor containing indices to be masked
-#
-#     Inputs: query, key, value, mask
-#         - **query** (batch, q_len, d_model): tensor containing projection vector for decoder.
-#         - **key** (batch, k_len, d_model): tensor containing projection vector for encoder.
-#         - **value** (batch, v_len, d_model): tensor containing features of the encoded input sequence.
-#         - **mask** (-): tensor containing indices to be masked
-#
-#     Returns: context, attn
-#         - **context**: tensor containing the context vector from attention mechanism.
-#         - **attn**: tensor containing the attention (alignment) from the encoder outputs.
-#     """
-#
-#     def __init__(self, dim: int):
-#         super(ScaledDotProductAttention, self).__init__()
-#         self.sqrt_dim = np.sqrt(dim)
-#
-#     def forward(self, query: Tensor, key: Tensor, value: Tensor, mask: Optional[Tensor] = None) -> Tuple[
-#         Tensor, Tensor]:
-#         score = torch.bmm(query, key.transpose(1, 2)) / self.sqrt_dim
-#
-#         if mask is not None:
-#             score.masked_fill_(mask.view(score.size()), -float('Inf'))
-#
-#         attn = F.softmax(score, -1)
-#         context = torch.bmm(attn, value)
-#         return context, attn
-#
-
 class RegressionLSTM(nn.Module):
     def __init__(self, num_sensors, num_hidden_units, num_layers, t, dropout, lin_layers):
         super().__init__()
@@ -99,13 +60,10 @@ class RegressionLSTM(nn.Module):
             num_layers=self.num_layers  # number of layers that have some hidden units
         )
         # self.attention_mechanism = ScaledDotProductAttention(num_hidden_units*2)
-        self.fc_cpu = nn.Linear(num_hidden_units * 2, lin_layers)
+        self.fc_cpu = nn.Linear(2*num_hidden_units, lin_layers)
         self.fc_cpu1 = nn.Linear(lin_layers, lin_layers)
         self.fc_cpu2 = nn.Linear(lin_layers, t)
         self.relu = nn.ReLU()
-        self.fc_mem = nn.Linear(num_hidden_units * 2, lin_layers)
-        self.fc_mem1 = nn.Linear(lin_layers, lin_layers)
-        self.fc_mem2 = nn.Linear(lin_layers, t)
 
     def forward(self, x):
         # BiLSTM
@@ -120,12 +78,7 @@ class RegressionLSTM(nn.Module):
         out_cpu = self.fc_cpu1(out_cpu)
         out_cpu = self.fc_cpu2(out_cpu)
 
-        out_mem = self.relu(output)
-        out_mem = self.fc_mem(out_mem)
-        out_mem = self.fc_mem1(out_mem)
-        out_mem = self.fc_mem2(out_mem)
-
-        return out_cpu, out_mem
+        return out_cpu
 
 
 def mse(prediction, real_value):
@@ -174,82 +127,64 @@ def append_to_file(file_path, content):
 def test_model(data_loader, model, optimizer, ix_epoch, device, t):
     model.eval()
     loss_cpu = 0
-    loss_mem = 0
     r2 = 0
     with torch.no_grad():  # do not calculate the gradient
         for i, (X, y) in enumerate(data_loader):
             X, y = X.to(device), y.to(device)
-            cpu, mem = model(X)
+            cpu = model(X)
             desired_shape = (len(cpu), t)
             actual_cpu = y[..., 0]
             actual_cpu = actual_cpu.view(desired_shape)
-            actual_mem = y[..., 1]
-            actual_mem = actual_mem.view(desired_shape)
 
             loss_cpu += my_loss_fn(cpu, actual_cpu)
-            loss_mem = my_loss_fn(mem, actual_mem)
             r2_cpu = my_r2_fn(cpu, actual_cpu)
-            r2_mem = my_r2_fn(mem, actual_mem)
-            r2 = r2_cpu + r2_mem
+            r2 = r2_cpu
     with tune.checkpoint_dir(
             ix_epoch) as checkpoint_dir:  # context manager creates a new directory for each epoch in the tuning process and returns the path to that directory as checkpoint_dir.
         path = os.path.join(checkpoint_dir, "checkpoint")
         torch.save((model.state_dict(), optimizer.state_dict()),
                    path)  # The torch.save() function saves the state of the PyTorch model and optimizer as a dictionary containing the state of each object.
     loss_cpu = (loss_cpu / len(data_loader)).item()
-    loss_mem = (loss_mem / len(data_loader)).item()
     r2 = (r2 / len(data_loader))
-    loss = (loss_mem + loss_cpu) / len(data_loader)
-    tune.report(loss_cpu=loss_cpu,
-                loss_mem=loss_mem, r2=r2,
-                loss=loss)  # The tune.report() function is used to report the loss and r2 of the model to the Ray Tune framework. This function takes a dictionary of metrics as input, where the keys are the names of the metrics and the values are the metric values.
+    tune.report( r2=r2,
+                loss=loss_cpu)  # The tune.report() function is used to report the loss and r2 of the model to the Ray Tune framework. This function takes a dictionary of metrics as input, where the keys are the names of the metrics and the values are the metric values.
 
 
 def train_model(data_loader, model, optimizer, device, t):
     model.train()
     for i, (X, y) in enumerate(data_loader):
         X, y = X.to(device), y.to(device)
-        print(X)
-        cpu, mem = model(X)
+        optimizer.zero_grad()  # sets gradients back to zero: when I start the training loop: zero out the gradients so that I can perform this tracking correctly
+        cpu = model(X)
         desired_shape = (len(cpu), t)  # should be same as batch size, but in case data%batch size isn't 0, we need this
         actual_cpu = y[..., 0]
         actual_cpu = actual_cpu.view(desired_shape)
-        actual_mem = y[..., 1]
-        actual_mem = actual_mem.view(desired_shape)
-
-        loss1 = my_loss_fn(cpu, actual_cpu)
-        loss2 = my_loss_fn(mem, actual_mem)
-        loss = loss1 + loss2
-        optimizer.zero_grad()  # sets gradients back to zero: when I start the training loop: zero out the gradients so that I can perform this tracking correctly
+        loss = my_loss_fn(cpu, actual_cpu)
         loss.backward()  # gradients computed
         optimizer.step()  # to proceed gradient descent
 
 
 def predict(data_loader, model, device):
     cpu = torch.tensor([])
-    mem = torch.tensor([])
     model.eval()
     with torch.no_grad():
         for i, (X, y) in enumerate(data_loader):
             X, y = X.to(device), y.to(device)
-            prediction_multiple = model(X)
-            y_prediction_cpu = prediction_multiple[0]
-            y_prediction_mem = prediction_multiple[1]
+            y_prediction_cpu = model(X)
             cpu = torch.cat((cpu, y_prediction_cpu), 0)
-            mem = torch.cat((mem, y_prediction_mem), 0)
-    return cpu, mem
+    return cpu
 
 
 def calc_MSE_Accuracy(t, y_test, y_test_pred, file_path, start_time, training_time):
-        mae = round(sm.mean_absolute_error(y_test, y_test_pred), 5)
-        mse = sm.mean_squared_error(y_test, y_test_pred)
-        r2 = round(sm.r2_score(y_test, y_test_pred), 5)
-        nr = naive_ratio(t, y_test_pred, y_test)
-        append_to_file(file_path, "mae & mse & r2 & nr & training & total")
-        append_to_file(file_path,
-                       str(mae) + " & " + str(mse) + " & " + str(r2) + " & " + str(
-                           np.round(nr.numpy(), decimals=5)) + " & " + str(training_time) + " & " + str(
-                           round((time.time() - start_time), 2)))
+    mae = round(sm.mean_absolute_error(y_test, y_test_pred), 5)
+    mse = sm.mean_squared_error(y_test, y_test_pred)
+    r2 = round(sm.r2_score(y_test, y_test_pred), 5)
+    nr = naive_ratio(t, y_test_pred, y_test)
+    append_to_file(file_path, "mae & mse & r2 & nr & training & total")
+    append_to_file(file_path,
+                   str(mae) + " & " + str(mse) + " & " + str(r2) + " & " + str(
+                       np.round(nr.numpy(), decimals=5)) + " & " + str(training_time) + " & " + str(
+                       round((time.time() - start_time), 2)))
 
 
 def normalize_data_minMax(features, df):
@@ -271,32 +206,24 @@ def denormalize_data_minMax(target, prediction_test):
     return prediction_test
 
 
-def calculate_prediction_results(t, pred_cpu_test, pred_mem_test, act_cpu_test, act_mem_test, pred_cpu_train,
-                                 pred_mem_train, act_cpu_train, act_mem_train, file_path, start_time, training_time):
+def calculate_prediction_results(t, pred_cpu_test, act_cpu_test, pred_cpu_train, act_cpu_train, file_path, start_time,
+                                 training_time):
     for i in range(t):
-        append_to_file(file_path, str(i+1) +" timestamp ahead prediction")
-        current_act_cpu_train = act_cpu_train[:,i]
-        current_pred_cpu_train = pred_cpu_train[:,i]
-        current_act_mem_train = act_mem_train[:,i]
-        current_pred_mem_train = pred_mem_train[:,i]
-        current_act_cpu_test = act_cpu_test[:,i]
-        current_pred_cpu_test = pred_cpu_test[:,i]
-        current_act_mem_test = act_mem_test[:,i]
-        current_pred_mem_test = pred_mem_test[:,i]
-        append_to_file(file_path, "TRAIN ERRORS:")
-        append_to_file(file_path, "CPU:")
+        print(act_cpu_train)
+        print(act_cpu_train[:, i])
+        append_to_file(file_path, str(i + 1) + " timestamp ahead prediction")
+        current_act_cpu_train = act_cpu_train[:, i]
+        current_pred_cpu_train = pred_cpu_train[:, i]
+        current_act_cpu_test = act_cpu_test[:, i]
+        current_pred_cpu_test = pred_cpu_test[:, i]
+        append_to_file(file_path, "TRAIN ERRORS CPU:")
         calc_MSE_Accuracy(t, current_act_cpu_train, current_pred_cpu_train, file_path, start_time, training_time)
-        append_to_file(file_path, "MEM:")
-        calc_MSE_Accuracy(t, current_act_mem_train, current_pred_mem_train, file_path, start_time, training_time)
         append_to_file(file_path, "TEST ERRORS CPU:")
-        append_to_file(file_path, "CPU:")
         calc_MSE_Accuracy(t, current_act_cpu_test, current_pred_cpu_test, file_path, start_time, training_time)
-        append_to_file(file_path, "MEM:")
-        calc_MSE_Accuracy(t, current_act_mem_test, current_pred_mem_test, file_path, start_time, training_time)
         append_to_file(file_path, "")
 
 
-def plot_results(t, predictions_cpu, predictions_mem, actual_values_cpu, actual_values_mem, sequence_length, target,
+def plot_results(t, predictions_cpu, actual_values_cpu, sequence_length, target,
                  df):
     indices = pd.DatetimeIndex(df["start_time"])
     indices = indices.tz_localize(timezone.utc).tz_convert('US/Eastern')
@@ -306,52 +233,36 @@ def plot_results(t, predictions_cpu, predictions_mem, actual_values_cpu, actual_
                [first_timestamp + i * increment for i in range(len(indices))]]
     indices = indices[int(len(df) * 0.7) + t - 1:]
     indices = [str(period) for period in indices]
-
     for i in range(t):
         current_predictions_cpu = predictions_cpu[:, i]
-        current_predictions_mem = predictions_mem[:, i]
         current_actual_values_cpu = actual_values_cpu[:, i]
-        current_actual_values_mem = actual_values_mem[:, i]
-        fig, axs = plt.subplots(nrows=1, ncols=2, figsize=(12, 10))
-        axs[0].plot(indices, current_actual_values_cpu, label='actual ' + target[0], linewidth=1,
-                    color='orange')
-        axs[0].plot(indices, current_predictions_cpu, label='predicted ' + target[0], linewidth=1, color='blue', linestyle='dashed')
-        axs[0].set_xlabel('Time')
-        axs[0].set_ylabel(target[0])
-        axs[0].set_title('LSTM ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(i+1))
-        axs[0].legend()
-        axs[0].tick_params(axis='x', rotation=45)  # Rotate x-axis labels
-        axs[0].xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # Set x-axis tick frequency
-
-        axs[1].plot(indices, current_actual_values_mem, label='actual ' + target[1], linewidth=1,
-                    color='orange')
-        axs[1].plot(indices, current_predictions_mem, label='predicted ' + target[1], linewidth=1, color='blue', linestyle='dashed')
-        axs[1].set_xlabel('Time')
-        axs[1].set_ylabel(target[1])
-        axs[1].set_title('LSTM ' + target[1] + ' prediction h=' + str(sequence_length) + ', t=' + str(i+1))
-        axs[1].legend()
-        axs[1].tick_params(axis='x', rotation=45)  # Rotate x-axis labels
-        axs[1].xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # Set x-axis tick frequency
-        plt.savefig('LSTM_multivariate_bi_directional_' + 'h' + str(sequence_length) + '_t' + str(i+1) + '' + '.png')
+        fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(12, 10))
+        plt.subplots_adjust(bottom=0.2)  # Adjust the value as needed
+        axs.plot(indices, current_actual_values_cpu, label='actual ' + target[0], linewidth=1,
+                 color='orange')
+        axs.plot(indices, current_predictions_cpu, label='predicted ' + target[0], linewidth=1,
+                 color='blue', linestyle='dashed')
+        axs.set_xlabel('Time')
+        plt.xticks(rotation=45)  # 'vertical')
+        plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
+        axs.set_ylabel(target[0])
+        axs.set_title('LSTM ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(i + 1))
+        axs.legend()
+        plt.savefig('LSTM_bi_directional_' + 'h' + str(sequence_length) + '_t' + str(i + 1) + '' + '.png')
 
 
 def get_prediction_results(t, target, test_dataset, best_trained_model, device, config):
     test_eval_loader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=1)
-    prediction_test_cpu, prediction_test_mem = predict(test_eval_loader, best_trained_model, device)
+    prediction_test_cpu = predict(test_eval_loader, best_trained_model, device)
     denorm_cpu = denormalize_data_minMax(target[0], prediction_test_cpu)
-    denorm_mem = denormalize_data_minMax(target[1], prediction_test_mem)
     start_train_index = config["sequence_length"]
     pred_denorm_cpu = denorm_cpu[config["sequence_length"] - 1:]
-    pred_denorm_mem = denorm_mem[config["sequence_length"] - 1:]
 
     # actual results needs to have the same size as the prediction
     actual_test_cpu = test_dataset.y[:, 0][start_train_index:]
-    actual_test_cpu=actual_test_cpu.unfold(0, t, 1)
-    actual_test_mem = test_dataset.y[:, 1][start_train_index:]
-    actual_test_mem=actual_test_mem.unfold(0, t, 1)
+    actual_test_cpu = actual_test_cpu.unfold(0, t, 1)
     act_denorm_cpu = denormalize_data_minMax(target[0], actual_test_cpu)
-    act_denorm_mem = denormalize_data_minMax(target[1], actual_test_mem)
-    return pred_denorm_cpu, pred_denorm_mem, act_denorm_cpu, act_denorm_mem
+    return pred_denorm_cpu, act_denorm_cpu
 
 
 def get_min_max_values_of_training_data(df):
@@ -365,8 +276,7 @@ def get_min_max_values_of_training_data(df):
 
 def get_training_data(t, target, features, df_train=None, config=None):
     # normalize data: this improves model accuracy as it gives equal weights/importance to each variable
-    # first use the filter, then normalize the data
-    df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
+    # df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
     df_train = normalize_data_minMax(features, df_train)
     train_sequence = SequenceDataset(
         df_train,
@@ -423,7 +333,7 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
 
 def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], target=["mean_CPU_usage"],
          num_samples=100):
-    file_path = 'lstm_multivariate_bidirectional_all_at_once.txt'
+    file_path = 'bi_lstm_univariate_dropout.txt'
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", epochs=" + str(epochs))
     start_time = time.time()
     scheduler = ASHAScheduler(
@@ -433,17 +343,16 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         grace_period=epochs / 4,
         reduction_factor=2)  # if it is set to 2, then half of the configurations survive each round.
     reporter = CLIReporter(
-        metric_columns=["loss", "loss_cpu", "loss_mem", "r2", "training_iteration"])
-    # first choose lin layers, units, then choose layers and sequence length
+        metric_columns=["loss", "r2", "training_iteration"])
     config = {
         "sequence_length": sequence_length,
-        "units": tune.choice([32, 64, 128]),
-        "layers": tune.choice([2, 3]),
-        "lin_layers": tune.choice([200]),
+        "units": tune.grid_search([64]),
+        "layers": tune.grid_search([2]),
+        "lin_layers": tune.grid_search([100]),
         "lr": tune.loguniform(0.0001, 0.001),  # takes lower and upper bound
-        "batch_size": tune.choice([3]),
+        "batch_size": tune.grid_search([16]),
     }
-    df = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",")
+    df = pd.read_csv("../../sortedGroupedJobFiles/3418324.csv", sep=",")
     # split into training and test set - check until what index the training data is
     test_head = int(len(df) * 0.7)
     df_train = df.iloc[:test_head, :]
@@ -492,25 +401,20 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     test_data_files_sequence = get_test_data(t, target, features, df_test, best_trial.config)
     training_data_files_sequence = get_training_data(t, target, features, df_train, best_trial.config)
     print("Get test results")
-    pred_cpu_test, pred_mem_test, act_cpu_test, act_mem_test = get_prediction_results(t, target,
-                                                                                      test_data_files_sequence,
-                                                                                      best_trained_model,
-                                                                                      device,
-                                                                                      best_trial.config)
+    pred_cpu_test, act_cpu_test = get_prediction_results(t, target, test_data_files_sequence,
+                                                         best_trained_model,
+                                                         device,
+                                                         best_trial.config)
     print("Get training results")
-    pred_cpu_train, pred_mem_train, act_cpu_train, act_mem_train = get_prediction_results(t, target,
-                                                                                          training_data_files_sequence,
-                                                                                          best_trained_model,
-                                                                                          device, best_trial.config)
+    pred_cpu_train, act_cpu_train = get_prediction_results(t, target, training_data_files_sequence, best_trained_model,
+                                                           device, best_trial.config)
     print("calculate results")
-    calculate_prediction_results(t, pred_cpu_test, pred_mem_test, act_cpu_test, act_mem_test, pred_cpu_train,
-                                 pred_mem_train, act_cpu_train, act_mem_train, file_path, start_time, training_time)
-    plot_results(t, pred_cpu_test, pred_mem_test, act_cpu_test, act_mem_test, best_trial.config["sequence_length"],
+    calculate_prediction_results(t, pred_cpu_test, act_cpu_test, pred_cpu_train,
+                                 act_cpu_train, file_path, start_time, training_time)
+    plot_results(t, pred_cpu_test, act_cpu_test, best_trial.config["sequence_length"],
                  target, df)
 
 
 if __name__ == "__main__":
-    for history in (2, 6, 12):
-        main(t=4, sequence_length=history, epochs=250, features=['mean_CPU_usage', 'canonical_mem_usage'],
-             target=['mean_CPU_usage', 'canonical_mem_usage'],
-             num_samples=20)
+    main(t=6, sequence_length=6, epochs=100, features=['mean_CPU_usage'],
+         target=['mean_CPU_usage'], num_samples=5)
