@@ -30,6 +30,19 @@ def naive_ratio(t, prediction, real_value):
     return et / et1
 
 
+def calculate_prediction_results(t, prediction, actual, start_time, training_time, path):
+    for i in range(t):
+        prediction_values = [arr[i] for arr in prediction]
+        actual_values = [arr[i] for arr in actual]
+        current_act_cpu_validation = actual_values
+        current_pred_cpu_validation = prediction_values
+        append_to_file(path, str(i + 1) + " timestamp ahead prediction")
+
+        calc_MSE_Accuracy(t, current_act_cpu_validation, current_pred_cpu_validation,
+                          path, start_time, training_time)
+        print("DONE")
+
+
 def calc_MSE_Accuracy(t, y_test, y_test_pred, file_path, start_time, training_time):
     mae = round(sm.mean_absolute_error(y_test, y_test_pred), 5)
     mse = sm.mean_squared_error(y_test, y_test_pred)
@@ -38,7 +51,7 @@ def calc_MSE_Accuracy(t, y_test, y_test_pred, file_path, start_time, training_ti
     append_to_file(file_path, "mae & mse & r2 & nr & training & total")
     append_to_file(file_path,
                    str(mae) + " & " + str(mse) + " & " + str(r2) + " & " + str(
-                       np.round(nr, decimals=5)) + " & " + str(training_time) + " & " + str(
+                       np.round(nr, decimals=5)) + " & " + str(round(training_time, 2)) + " & " + str(
                        round((time.time() - start_time), 2)))
 
 
@@ -51,23 +64,31 @@ def append_to_file(file_path, content):
         print("An error occurred while writing to the file.")
 
 
-def plot_results(t, sequence_length, csv, observations, predictions, target, size):
-    indices = csv.index
-    indices = indices[size + t - 1:]
+def plot_results(t, sequence_length, df, actual_values_cpu, predictions_cpu, target):
+    indices = pd.DatetimeIndex(df["start_time"])
+    indices = indices.tz_localize(timezone.utc).tz_convert('US/Eastern')
+    first_timestamp = indices[0].replace(year=2011, month=5, day=1, hour=19, minute=0)
+    increment = timedelta(minutes=5)
+    indices = [timestamp.strftime("%Y-%m-%d %H:%M") for timestamp in
+               [first_timestamp + i * increment for i in range(len(indices))]]
+    indices = indices[int(len(df) * 0.7) + t - 1:]
     indices = [str(period) for period in indices]
-    # plot forecasts against actual outcomes
-    fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(10, 8))
-
-    plt.subplots_adjust(bottom=0.2)  # Adjust the value as needed
-    axs.plot(indices, observations, label='actual ' + target, linewidth=1, color='orange')
-    axs.plot(indices, predictions, label='predicted ' + target, linewidth=1, color='blue', linestyle='dashed')
-    axs.set_xlabel('Time')
-    plt.xticks(rotation=45)  # 'vertical')
-    plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
-    axs.set_ylabel(target)
-    axs.set_title('ARIMA ' + target + ' prediction h=' + str(sequence_length) + ', t=' + str(t))
-    axs.legend()
-    plt.savefig('ARIMA_' + 'h' + str(sequence_length) + '_t' + str(t) + '' + '.png')
+    for i in range(t):
+        current_predictions_cpu = predictions_cpu[:, i]
+        current_actual_values_cpu = actual_values_cpu[:, i]
+        fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(12, 10))
+        plt.subplots_adjust(bottom=0.2)  # Adjust the value as needed
+        axs.plot(indices, current_actual_values_cpu, label='actual ' + target[0], linewidth=1,
+                 color='orange')
+        axs.plot(indices, current_predictions_cpu, label='predicted ' + target[0], linewidth=1,
+                 color='blue', linestyle='dashed')
+        axs.set_xlabel('Time')
+        plt.xticks(rotation=45)  # 'vertical')
+        plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
+        axs.set_ylabel(target[0])
+        axs.set_title('LSTM ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(i + 1))
+        axs.legend()
+        plt.savefig('ARIMA_' + 'h' + str(sequence_length) + '_t' + str(i + 1) + '' + '.png')
 
 
 def main(t, sequence_length, target):
@@ -97,22 +118,28 @@ def main(t, sequence_length, target):
     predictions = list()
     observations = list()
     for x in range(int(len(test) - t + 1)):
+        # print(history)
         warnings.filterwarnings("ignore", category=ConvergenceWarning)
         warnings.filterwarnings("ignore", category=UserWarning)
-        model = ARIMA(history, order=order)
-        model_fit = model.fit()
-        output = model_fit.forecast(steps=t)
-        if isinstance(output, pd.Series):
-            output = output.values
-        predictions.append(output[0])
-        observations.append(test.iloc[x + t - 1][target])
-        history = np.append(history, test.iloc[x][target])
-        history = history[-sequence_length:]
-    calc_MSE_Accuracy(t, observations, predictions, file_path, start_time, training_time)
-    plot_results(t, sequence_length, csv, observations, predictions, target, size)
+        try:
+            model = ARIMA(history, order=order)
+            model_fit = model.fit()
+            output = model_fit.forecast(steps=t)
+        except np.linalg.LinAlgError as e:
+            print("Error occurred:", e)
+            predictions.append([0, 0, 0, 0, 0, 0])
+        else:
+            if isinstance(output, pd.Series):
+                output = output.values
+            predictions.append(output)
+        finally:
+            observations.append(test.iloc[x:x + t][target].values)
+            history = pd.concat([history, pd.DataFrame([test.iloc[x]], columns=history.columns)])
+            history = history[-sequence_length:]
+    calculate_prediction_results(t, predictions, observations, start_time, training_time, file_path)
+    plot_results(t, sequence_length, csv, observations, predictions, target)
 
 
 if __name__ == "__main__":
-    for t in (1, 2, 3, 6):
-        for history in (1, 12, 72):
-            main(t, history, 'mean_CPU_usage')
+    for history in (1, 6, 12):
+        main(6, history, 'mean_CPU_usage')

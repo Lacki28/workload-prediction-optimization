@@ -87,27 +87,23 @@ def predict(file_path, t, target, sequence_length, selected_files, dir):
             # print(history)
             warnings.filterwarnings("ignore", category=ConvergenceWarning)
             warnings.filterwarnings("ignore", category=UserWarning)
-            model = ARIMA(history, order=order)
             try:
-                model = ARIMA(history['mean_CPU_usage'], order=(3, 0, 0))
+                model = ARIMA(history, order=order)
                 model_fit = model.fit()
                 output = model_fit.forecast(steps=t)
-                if isinstance(output, pd.Series):
-                    output = output.values
-
-                predictions.append(output)
-
-
             except np.linalg.LinAlgError as e:
                 print("Error occurred:", e)
                 predictions.append([0, 0, 0, 0, 0, 0])
-
+            else:
+                if isinstance(output, pd.Series):
+                    output = output.values
+                predictions.append(output)
+            finally:
                 observations.append(test.iloc[x:x + t][target].values)
                 history = pd.concat([history, pd.DataFrame([test.iloc[x]], columns=history.columns)])
                 history = history[-sequence_length:]
 
         calculate_prediction_results(t, predictions, observations, start_time, training_time, dir)
-        # calc_MSE_Accuracy(t, observations, predictions, dir, start_time, training_time=training_time)
 
 
 def read_file_names(file_path, path, index_start, index_end):
