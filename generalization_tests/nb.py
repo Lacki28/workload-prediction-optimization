@@ -158,7 +158,7 @@ def get_prediction_results(sequence_length, t, test_datasets,target):
 
 
 def read_file_names(file_path, path, index_start, index_end):
-    dir = "~/Documents/pythonScripts/" + path + "/"
+    dir = "~/Documents/pythonScripts/new/" + path + "/"
     expanded_path = os.path.expanduser(dir)
     g0 = os.listdir(expanded_path)
     g0 = g0[index_start: index_end]
