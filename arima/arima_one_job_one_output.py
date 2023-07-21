@@ -74,8 +74,10 @@ def plot_results(t, sequence_length, df, actual_values_cpu, predictions_cpu, tar
     indices = indices[int(len(df) * 0.7) + t - 1:]
     indices = [str(period) for period in indices]
     for i in range(t):
-        current_predictions_cpu = predictions_cpu[:, i]
-        current_actual_values_cpu = actual_values_cpu[:, i]
+        current_predictions_cpu = [arr[i] for arr in predictions_cpu]
+        current_actual_values_cpu = [arr[i] for arr in actual_values_cpu]
+        # current_predictions_cpu = predictions_cpu[:, i]
+        # current_actual_values_cpu = actual_values_cpu[:, i]
         fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(12, 10))
         plt.subplots_adjust(bottom=0.2)  # Adjust the value as needed
         axs.plot(indices, current_actual_values_cpu, label='actual ' + target[0], linewidth=1,
@@ -94,7 +96,7 @@ def plot_results(t, sequence_length, df, actual_values_cpu, predictions_cpu, tar
 def main(t, sequence_length, target):
     file_path = 'ARIMA.txt'
     start_time = time.time()
-    csv = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",", header=0)
+    csv = pd.read_csv("../../sortedGroupedJobFiles/3418324.csv", sep=",", header=0)
     # set correct index
     csv.index = pd.DatetimeIndex(csv["start_time"])
     csv.index = csv.index.tz_localize(timezone.utc).tz_convert('US/Eastern')

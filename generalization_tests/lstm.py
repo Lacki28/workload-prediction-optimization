@@ -53,11 +53,11 @@ class RegressionLSTM(nn.Module):
             input_size=num_sensors,  # the number of expected features in the input x
             hidden_size=num_hidden_units,  # The number of features in the hidden state h
             batch_first=True,
-            bidirectional=True,
+            bidirectional=False,
             dropout=dropout,
             num_layers=self.num_layers  # number of layers that have some hidden units
         )
-        self.fc_cpu = nn.Linear(num_hidden_units * 2, lin_layers)
+        self.fc_cpu = nn.Linear(num_hidden_units, lin_layers)
         self.fc_cpu1 = nn.Linear(lin_layers, lin_layers)
         self.fc_cpu2 = nn.Linear(lin_layers, t)
         self.relu = nn.ReLU()

@@ -23,8 +23,8 @@ def create_boxplot(loss, name, timestamp, dir):
     plt.boxplot(loss, labels=[name])
     plt.xlabel('Loss value')
     plt.ylabel('Metric')
-    plt.title('LSTM benchmark loss values for ' + str(timestamp + 1) + ' ahead prediction')
-    plt.savefig('LSTM_' + dir + '_' + name + '_loss_t' + str(timestamp + 1) + '.png')
+    plt.title('Arima loss values for ' + str(timestamp + 1) + ' ahead prediction')
+    plt.savefig('Arima_' + dir + '_' + name + '_loss_t' + str(timestamp + 1) + '.png')
 
 
 def calc_avg(lst):
@@ -42,7 +42,7 @@ def get_avg_loss(dir):
         training_time = []
         total_time = []
 
-        with open('new_data_filtered_'+dir + str(timestamp + 1) + ".txt", 'r') as file:
+        with open(dir + str(timestamp + 1) + ".txt", 'r') as file:
             counter =0
             for line in file:
                 if counter%2 ==1:
@@ -66,7 +66,7 @@ def get_avg_loss(dir):
 
 def main():
     get_avg_loss("test")
-    get_avg_loss("train")
+    # get_avg_loss("train")
     get_avg_loss("validation")
 
 
