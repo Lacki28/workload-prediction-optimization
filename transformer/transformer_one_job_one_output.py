@@ -323,7 +323,7 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
 
 def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], target=["mean_CPU_usage"],
          num_samples=100):
-    file_path = 'transformer_univariate_tests.txt'
+    file_path = 'results/transformer_univariate_tests.txt'
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", epochs=" + str(epochs))
     start_time = time.time()
     scheduler = ASHAScheduler(
@@ -411,5 +411,5 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
 if __name__ == "__main__":
     for history in (1, 6, 12):
-        main(t=6, sequence_length=h, epochs=200, features=['mean_CPU_usage'],
+        main(t=6, sequence_length=history, epochs=150, features=['mean_CPU_usage'],
              target=['mean_CPU_usage'], num_samples=2)

@@ -54,7 +54,7 @@ def calc_MSE_Accuracy(t, y_test, y_test_pred, file_path, start_time, training_ti
 
 
 
-def plot_results(t, sequence_length, df, actual_values_cpu, predictions_cpu, target):
+def plot_results(t, sequence_length, df, actual_values_cpu, predictions_cpu, target, max_depth):
     indices = pd.DatetimeIndex(df["start_time"])
     indices = indices.tz_localize(timezone.utc).tz_convert('US/Eastern')
     first_timestamp = indices[0].replace(year=2011, month=5, day=1, hour=19, minute=0)
@@ -76,7 +76,7 @@ def plot_results(t, sequence_length, df, actual_values_cpu, predictions_cpu, tar
         axs.set_ylabel(target)
         axs.set_title('Random forest ' + target + ' prediction h=' + str(sequence_length) + ', t=' + str(i+1))
         axs.legend()
-        plt.savefig('rf' + 'h' + str(sequence_length) + '_t' + str(i+1) + '' + '.png')
+        plt.savefig(str(max_depth)+'_rf_' + 'h' + str(sequence_length) + '_t' + str(i+1) + '' + '.png')
 
 
 
@@ -93,9 +93,9 @@ def create_sliding_window(t, sequence_length, x_data, y_data):
 
 
 def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_usage", trees=200, max_depth=3):
-    file_path = 'rf.txt'
+    file_path = 'results/rf.txt'
     start_time = time.time()
-    df = pd.read_csv("../../../sortedGroupedJobFiles/3418324.csv", sep=",")
+    df = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",")
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length))
     append_to_file(file_path, 'trees=' + str(trees) + ', max depth=' + str(max_depth))
     # create correct index
@@ -133,12 +133,11 @@ def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_us
     y_test = y_test.squeeze()
     calculate_prediction_results(t, y_prediction, y_test, file_path, start_time,
                                 training_time)
-    calc_MSE_Accuracy(t, y_test, y_prediction, file_path, start_time, training_time)
-    plot_results(t, sequence_length, df, y_test, y_prediction, target[0])
+    plot_results(t, sequence_length, df, y_test, y_prediction, target[0], max_depth)
 
 
 if __name__ == "__main__":
 
     for history in (1, 6, 12):
-        for max_depth in (2, 3, 4):
+        for max_depth in (3, 4):
             main(6, history, 'mean_CPU_usage', 'mean_CPU_usage', 150, max_depth)

@@ -308,7 +308,7 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_files=Non
 
 
 def read_file_names(file_path, path, index_start, index_end):
-    dir = "~/Documents/pythonScripts/" + path + "/"
+    dir = "~/Documents/pythonScripts/new/" + path + "/"
     expanded_path = os.path.expanduser(dir)
     g0 = os.listdir(expanded_path)
     g0 = g0[index_start: index_end]
@@ -330,7 +330,7 @@ def read_files(training_files, training):
 
 def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], target=["mean_CPU_usage"],
          num_samples=100):
-    file_path = 'lstm_univariate_bidirectional_trained_new_data_filtered.txt'
+    file_path = 'lstm_univariate_trained_new_data_filtered.txt'
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", epochs=" + str(epochs))
     start_time = time.time()
     scheduler = ASHAScheduler(
@@ -373,7 +373,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         print(trial.metric_analysis)
     # retrieve the best trial from a Ray Tune experiment using the get_best_trial() method of the tune.ExperimentAnalysis object.
     # three arguments: the name of the metric to optimize, the direction of optimization ("min" for minimizing the metric or "max" for maximizing it), and the mode for selecting the best trial ("last" for selecting the last trial that achieved the best metric value, or "all" for selecting all trials that achieved the best metric value).
-    best_trial = result.get_best_trial("loss", "min", "last")
+    best_trial = result.get_best_trial("r2", "max", "last")
     training_time = round((time.time() - start_time), 2)
     print("Best trial config: {}".format(best_trial.config))
     print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))

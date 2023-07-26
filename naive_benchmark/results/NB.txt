@@ -1,0 +1,42 @@
+t=1, sequence length=1/12/72
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00012 & 7.185827e-07 & -0.13891 & inf & 0 & 0.04
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00011 & 5.2138294e-08 & 0.72978 & inf & 0 & 0.04
+t=2, sequence length=1/12/72
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00015 & 8.647062e-07 & -0.3703 & inf & 0 & 0.04
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00014 & 9.0244846e-08 & 0.53203 & inf & 0 & 0.04
+t=3, sequence length=1/12/72
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00016 & 8.097653e-07 & -0.28302 & inf & 0 & 0.06
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00016 & 1.1041268e-07 & 0.4267 & inf & 0 & 0.06
+t=4, sequence length=1/12/72
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00018 & 8.645338e-07 & -0.36961 & inf & 0 & 0.05
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00018 & 1.227637e-07 & 0.36193 & inf & 0 & 0.05
+t=5, sequence length=1/12/72
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00019 & 8.7756865e-07 & -0.39006 & inf & 0 & 0.06
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.0002 & 1.419728e-07 & 0.26112 & inf & 0 & 0.06
+t=6, sequence length=1/12/72
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.0002 & 8.857343e-07 & -0.40279 & inf & 0 & 0.04
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00022 & 1.6521274e-07 & 0.13938 & inf & 0 & 0.04

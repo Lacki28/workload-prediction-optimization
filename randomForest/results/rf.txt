@@ -1,0 +1,120 @@
+t=6, sequence length=1
+trees=150, max depth=3
+1 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00013 & 5.549620878653138e-08 & 0.71282 & 0.67374 & 0.33 & 0.34
+2 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00016 & 8.003846934831261e-08 & 0.58552 & 0.8661 & 0.33 & 0.34
+3 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00018 & 9.455935951208221e-08 & 0.50958 & 1.00758 & 0.33 & 0.34
+4 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00018 & 1.030922813507097e-07 & 0.46459 & 1.17355 & 0.33 & 0.34
+5 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.0002 & 1.152889421672439e-07 & 0.40023 & 1.37891 & 0.33 & 0.34
+6 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00021 & 1.2329238528719108e-07 & 0.35775 & 1.93644 & 0.33 & 0.34
+t=6, sequence length=1
+trees=150, max depth=4
+1 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00013 & 5.6398454709505686e-08 & 0.70815 & 0.64842 & 0.36 & 0.37
+2 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00016 & 9.967863973920345e-08 & 0.48381 & 0.8586 & 0.36 & 0.37
+3 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00018 & 9.724931458451126e-08 & 0.49562 & 1.00716 & 0.36 & 0.37
+4 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00018 & 1.0598032231101833e-07 & 0.44959 & 1.17725 & 0.36 & 0.37
+5 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.0002 & 1.183261936422665e-07 & 0.38443 & 1.37746 & 0.36 & 0.37
+6 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00021 & 1.240267663082581e-07 & 0.35393 & 1.91601 & 0.36 & 0.37
+t=6, sequence length=6
+trees=150, max depth=3
+1 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00014 & 5.961783900260821e-08 & 0.69149 & 0.73857 & 0.8 & 0.81
+2 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00016 & 7.996481979762086e-08 & 0.5859 & 0.91985 & 0.8 & 0.81
+3 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00017 & 9.553901668475782e-08 & 0.5045 & 1.0746 & 0.8 & 0.81
+4 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00018 & 1.0134873052454915e-07 & 0.47364 & 1.23877 & 0.8 & 0.81
+5 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.0002 & 1.1255490539070863e-07 & 0.41445 & 1.45981 & 0.8 & 0.81
+6 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00021 & 1.2228412191406174e-07 & 0.363 & 1.7843 & 0.8 & 0.81
+t=6, sequence length=6
+trees=150, max depth=4
+1 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00013 & 5.961717022736146e-08 & 0.69149 & 0.71076 & 0.99 & 1.01
+2 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00016 & 8.630107195262956e-08 & 0.55309 & 0.93312 & 0.99 & 1.01
+3 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00017 & 1.00764721333587e-07 & 0.47739 & 1.10047 & 0.99 & 1.01
+4 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00018 & 1.036371415603371e-07 & 0.46176 & 1.31755 & 0.99 & 1.01
+5 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00019 & 1.125032965106435e-07 & 0.41472 & 1.56504 & 0.99 & 1.01
+6 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.0002 & 1.2182898149754523e-07 & 0.36538 & 1.86524 & 0.99 & 1.01
+t=6, sequence length=12
+trees=150, max depth=3
+1 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00014 & 6.174198896462379e-08 & 0.68049 & 0.74709 & 1.39 & 1.4
+2 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00016 & 7.938774550962805e-08 & 0.58889 & 0.92015 & 1.39 & 1.41
+3 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00018 & 9.689266738813633e-08 & 0.49747 & 1.06638 & 1.39 & 1.41
+4 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00018 & 1.0102864346595339e-07 & 0.47531 & 1.23391 & 1.39 & 1.41
+5 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.0002 & 1.1196880204605872e-07 & 0.4175 & 1.43018 & 1.39 & 1.41
+6 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00021 & 1.2150903709679274e-07 & 0.36704 & 1.76164 & 1.39 & 1.41
+t=6, sequence length=12
+trees=150, max depth=4
+1 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00013 & 6.213417938060917e-08 & 0.67847 & 0.71092 & 1.79 & 1.8
+2 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00016 & 8.445588183609053e-08 & 0.56264 & 0.92453 & 1.79 & 1.8
+3 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00017 & 1.0245807508891007e-07 & 0.46861 & 1.09028 & 1.79 & 1.8
+4 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00018 & 1.017993527939994e-07 & 0.4713 & 1.29039 & 1.79 & 1.8
+5 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00019 & 1.1283225619814727e-07 & 0.41301 & 1.53695 & 1.79 & 1.8
+6 timestamp ahead prediction
+mae & mse & r2 & nr & training & total
+0.00021 & 1.2296664610286737e-07 & 0.35945 & 1.86053 & 1.79 & 1.8
