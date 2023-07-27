@@ -1,6 +1,7 @@
 import math
 import os
 import time
+from datetime import timezone, timedelta
 from functools import partial
 
 import numpy as np
@@ -8,10 +9,12 @@ import pandas as pd
 import sklearn.metrics as sm
 import torch
 import torch.nn as nn
+from matplotlib import pyplot as plt, ticker
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 from scipy.signal import savgol_filter
+from sklearn.model_selection import KFold
 from torch.utils.data import Dataset, DataLoader
 
 min_max_dict = {}
@@ -40,27 +43,41 @@ class SequenceDataset(Dataset):
             x = torch.cat((padding, x), 0)
         return x, self.y[i: i + self.t]  # return target n time stamps ahead
 
-class TimeSeriesTransformer(nn.Module):
+class RegressionLSTM(nn.Module):
+    def __init__(self, num_sensors, num_hidden_units, num_layers, t, dropout, lin_layers):
+        super().__init__()
+        self.input_size = num_sensors  # this is the number of features
+        self.hidden_units = num_hidden_units
+        self.num_layers = num_layers
+        self.t = t
 
-    def __init__(self, input_dim, output_dim, d_model, nhead, dim_feedforward, num_layers, sequence_length):
-        super(TimeSeriesTransformer, self).__init__()
-        self.embedding = nn.Linear(input_dim, d_model)
-        self.transformer_encoder = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward),
-            num_layers=num_layers
+        self.lstm = nn.LSTM(
+            input_size=num_sensors,  # the number of expected features in the input x
+            hidden_size=num_hidden_units,  # The number of features in the hidden state h
+                batch_first=False,
+            bidirectional=False,
+            dropout=dropout,
+            num_layers=self.num_layers  # number of layers that have some hidden units
         )
+        self.fc_cpu = nn.Linear(num_hidden_units, lin_layers)
+        self.fc_cpu1 = nn.Linear(lin_layers, lin_layers)
+        self.fc_cpu2 = nn.Linear(lin_layers, t)
+        self.relu = nn.ReLU()
 
-        self.decoder = nn.Linear(d_model * sequence_length, output_dim)
+    def forward(self, x):
+        output, (hn, cn) = self.lstm(x)  # (input, hidden, and internal state)
 
-    def forward(self, input):
-        batch_size, seq_len, input_dim = input.size()
-        input = input.transpose(0, 1)  # Shape: (seq_len, batch_size, input_dim)
-        input = self.embedding(input)  # Shape: (seq_len, batch_size, d_model)
+        output = output[:, -1, :]
 
-        output = self.transformer_encoder(input)  # Shape: (seq_len, batch_size, d_model)
-        output = output.view(batch_size, -1)  # Shape: (batch_size, seq_len * d_model)
-        output = self.decoder(output)  # Shape: (batch_size, output_dim)
-        return output
+        # attention layer
+        # fully connected layers
+        out_cpu = self.relu(output)
+        out_cpu = self.fc_cpu(out_cpu)
+        out_cpu = self.fc_cpu1(out_cpu)
+        out_cpu = self.fc_cpu2(out_cpu)
+
+        return out_cpu
+
 
 def mse(prediction, real_value):
     MSE = torch.square(torch.subtract(real_value, prediction)).mean()
@@ -85,6 +102,7 @@ def naive_ratio(t, prediction, real_value):
 def my_loss_fn(output, target):
     loss = 0
     loss += mse(output, target)
+    # loss += naive_ratio(output, target, size)
     return loss
 
 
@@ -117,15 +135,18 @@ def test_model(data_loader, model, optimizer, ix_epoch, device, t):
             actual_cpu = actual_cpu.view(desired_shape)
 
             loss_cpu += my_loss_fn(cpu, actual_cpu)
-            r2 = my_r2_fn(cpu, actual_cpu)
+            r2_cpu = my_r2_fn(cpu, actual_cpu)
+            r2 = r2_cpu
     with tune.checkpoint_dir(
             ix_epoch) as checkpoint_dir:  # context manager creates a new directory for each epoch in the tuning process and returns the path to that directory as checkpoint_dir.
         path = os.path.join(checkpoint_dir, "checkpoint")
         torch.save((model.state_dict(), optimizer.state_dict()),
                    path)  # The torch.save() function saves the state of the PyTorch model and optimizer as a dictionary containing the state of each object.
-    loss = (loss_cpu / len(data_loader)).item()
+    loss_cpu = (loss_cpu / len(data_loader)).item()
     r2 = (r2 / len(data_loader))
-    return r2, loss
+    tune.report( r2=r2,
+                loss=loss_cpu)  # The tune.report() function is used to report the loss and r2 of the model to the Ray Tune framework. This function takes a dictionary of metrics as input, where the keys are the names of the metrics and the values are the metric values.
+
 
 def train_model(data_loader, model, optimizer, device, t):
     model.train()
@@ -136,7 +157,6 @@ def train_model(data_loader, model, optimizer, device, t):
         desired_shape = (len(cpu), t)  # should be same as batch size, but in case data%batch size isn't 0, we need this
         actual_cpu = y[..., 0]
         actual_cpu = actual_cpu.view(desired_shape)
-
         loss = my_loss_fn(cpu, actual_cpu)
         loss.backward()  # gradients computed
         optimizer.step()  # to proceed gradient descent
@@ -152,13 +172,12 @@ def predict(data_loader, model, device):
             cpu = torch.cat((cpu, y_prediction_cpu), 0)
     return cpu
 
-
 def calc_MSE_Accuracy(t, y_test, y_test_pred, file_path, start_time, training_time):
     mae = round(sm.mean_absolute_error(y_test, y_test_pred), 5)
     mse = sm.mean_squared_error(y_test, y_test_pred)
     r2 = round(sm.r2_score(y_test, y_test_pred), 5)
     nr = naive_ratio(t, y_test_pred, y_test)
-    # append_to_file(file_path, "mae & mse & r2 & nr & training & total")
+    append_to_file(file_path, "mae & mse & r2 & nr & training & total")
     append_to_file(file_path,
                    str(mae) + " & " + str(mse) + " & " + str(r2) + " & " + str(
                        np.round(nr.numpy(), decimals=5)) + " & " + str(training_time) + " & " + str(
@@ -184,32 +203,61 @@ def denormalize_data_minMax(target, prediction_test):
     return prediction_test
 
 
-def calculate_prediction_results(t, prediction, actual_values, start_time, training_time, path):
-    for job_index in range(len(prediction)):
-        for i in range(t):
-            current_act_cpu_validation = actual_values[job_index][:, i]
-            current_pred_cpu_validation = prediction[job_index][:, i]
-            calc_MSE_Accuracy(t, current_act_cpu_validation.cpu(), current_pred_cpu_validation.cpu(),
-                              path + str(i + 1) + ".txt", start_time, training_time)
+def calculate_prediction_results(t, pred_cpu_test, act_cpu_test, pred_cpu_train, act_cpu_train, file_path, start_time,
+                                 training_time):
+    for i in range(t):
+        append_to_file(file_path, str(i + 1) + " timestamp ahead prediction")
+        current_act_cpu_train = act_cpu_train[:, i]
+        current_pred_cpu_train = pred_cpu_train[:, i]
+        current_act_cpu_test = act_cpu_test[:, i]
+        current_pred_cpu_test = pred_cpu_test[:, i]
+        append_to_file(file_path, "TRAIN ERRORS CPU:")
+        calc_MSE_Accuracy(t, current_act_cpu_train, current_pred_cpu_train, file_path, start_time, training_time)
+        append_to_file(file_path, "TEST ERRORS CPU:")
+        calc_MSE_Accuracy(t, current_act_cpu_test, current_pred_cpu_test, file_path, start_time, training_time)
+        append_to_file(file_path, "")
 
 
-def get_prediction_results(t, target, test_data, best_trained_model, device, config):
-    pred_denorm_cpus = list()
-    act_denorm_cpus = list()
-    for data in test_data:
-        test_eval_loader = DataLoader(data, batch_size=1, shuffle=False, num_workers=1)
-        prediction_test_cpu = predict(test_eval_loader, best_trained_model, device)
-        denorm_cpu = denormalize_data_minMax(target[0], prediction_test_cpu)
-        start_train_index = config["sequence_length"]
-        pred_denorm_cpu = denorm_cpu[config["sequence_length"] - 1:]
+def plot_results(t, predictions_cpu, actual_values_cpu, sequence_length, target,
+                 df):
+    indices = pd.DatetimeIndex(df["start_time"])
+    indices = indices.tz_localize(timezone.utc).tz_convert('US/Eastern')
+    first_timestamp = indices[0].replace(year=2011, month=5, day=1, hour=19, minute=0)
+    increment = timedelta(minutes=5)
+    indices = [timestamp.strftime("%Y-%m-%d %H:%M") for timestamp in
+               [first_timestamp + i * increment for i in range(len(indices))]]
+    indices = indices[int(len(df) * 0.7) + t - 1:]
+    indices = [str(period) for period in indices]
+    for i in range(t):
+        current_predictions_cpu = predictions_cpu[:, i]
+        current_actual_values_cpu = actual_values_cpu[:, i]
+        fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(12, 10))
+        plt.subplots_adjust(bottom=0.2)  # Adjust the value as needed
+        axs.plot(indices, current_actual_values_cpu, label='actual ' + target[0], linewidth=1,
+                 color='orange')
+        axs.plot(indices, current_predictions_cpu, label='predicted ' + target[0], linewidth=1,
+                 color='blue', linestyle='dashed')
+        axs.set_xlabel('Time', fontsize=18)
+        plt.xticks(rotation=45)  # 'vertical')
+        plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
+        axs.set_ylabel(target[0], fontsize=18)
+        axs.set_title('LSTM ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(i + 1), fontsize=20)
+        axs.legend(fontsize=16)
+        plt.savefig('LSTM_' + 'h' + str(sequence_length) + '_t' + str(i + 1) + '' + '.png')
 
-        # actual results needs to have the same size as the prediction
-        actual_test_cpu = data.y[:, 0][start_train_index:]
-        actual_test_cpu = actual_test_cpu.unfold(0, t, 1)
-        act_denorm_cpu = denormalize_data_minMax(target[0], actual_test_cpu)
-        pred_denorm_cpus.append(pred_denorm_cpu)
-        act_denorm_cpus.append(act_denorm_cpu)
-    return pred_denorm_cpus, act_denorm_cpus
+
+def get_prediction_results(t, target, test_dataset, best_trained_model, device, config):
+    test_eval_loader = DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=1)
+    prediction_test_cpu = predict(test_eval_loader, best_trained_model, device)
+    denorm_cpu = denormalize_data_minMax(target[0], prediction_test_cpu)
+    start_train_index = config["sequence_length"]
+    pred_denorm_cpu = denorm_cpu[config["sequence_length"] - 1:]
+
+    # actual results needs to have the same size as the prediction
+    actual_test_cpu = test_dataset.y[:, 0][start_train_index:]
+    actual_test_cpu = actual_test_cpu.unfold(0, t, 1)
+    act_denorm_cpu = denormalize_data_minMax(target[0], actual_test_cpu)
+    return pred_denorm_cpu, act_denorm_cpu
 
 
 def get_min_max_values_of_training_data(df):
@@ -223,8 +271,7 @@ def get_min_max_values_of_training_data(df):
 
 def get_training_data(t, target, features, df_train=None, config=None):
     # normalize data: this improves model accuracy as it gives equal weights/importance to each variable
-    # first use the filter, then normalize the data
-    df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
+
     df_train = normalize_data_minMax(features, df_train)
     train_sequence = SequenceDataset(
         df_train,
@@ -247,24 +294,10 @@ def get_test_data(t, target, features, df_test=None, config=None):
     return test_sequence
 
 
-def train_and_test_model(config, checkpoint_dir="checkpoint", training_files=None, validation_files=None, t=None,
-                         epochs=None,
+def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file=None, t=None, epochs=None,
                          features=None, target=None, device=None):
-    training_files = read_files(training_files, True)
-    validation_files = read_files(validation_files, False)
-    training_loaders = list()
-    for df_train in training_files:
-        training_sequence = get_training_data(t, target, features, df_train, config)
-        train_loader = DataLoader(training_sequence, batch_size=config["batch_size"], shuffle=False)
-        training_loaders.append(train_loader)
-    validation_loaders = list()
-    for df_validation in validation_files:
-        validation_sequence = get_test_data(t, target, features, df_validation, config)
-        train_loader = DataLoader(validation_sequence, batch_size=config["batch_size"], shuffle=False)
-        validation_loaders.append(train_loader)
-
-    model = TimeSeriesTransformer(len(features), t, config["d_model"], config["nhead"],
-                                  config["dim_feedforward"], config["num_layers"], config["sequence_length"])
+    model = RegressionLSTM(num_sensors=len(features), num_hidden_units=config["units"], num_layers=config["layers"],
+                           t=t, dropout=0.2, lin_layers=config['lin_layers'])
     # Wrap the model in nn.DataParallel to support data parallel training on multiple GPUs:
     if torch.cuda.is_available():
         if torch.cuda.device_count() > 1:
@@ -276,41 +309,19 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_files=Non
             os.path.join(checkpoint_dir, "checkpoint"))
         model.load_state_dict(model_state)
         optimizer.load_state_dict(optimizer_state)
-
-
+    batch_size = config["batch_size"]
+    cv = KFold(n_splits=5, shuffle=False)
+    training_sequence = get_training_data(t, target, features, training_data_file, config)
     for ix_epoch in range(epochs):  # in each epoch, train with the file that performs worse
-        r2s =list()
-        losses =list()
-        for training_loader in training_loaders:
-            # validation_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False
-            train_model(training_loader, model, optimizer=optimizer, device=device, t=t)
-        for validation_loader in validation_loaders:
-            r2, loss=test_model(validation_loader, model, optimizer, ix_epoch, device=device, t=t)
-            r2s.append(r2)
-            losses.append(loss)
-        tune.report(r2=sum(r2s),
-                    loss=sum(losses))  # The tune.report() function is used to report the loss and r2 of the model to the Ray Tune framework. This function takes a dictionary of metrics as input, where the keys are the names of the metrics and the values are the metric values.
+        for train_index, validation_index in cv.split(training_sequence):
+            train_subset = torch.utils.data.Subset(training_sequence, train_index)
+            val_subset = torch.utils.data.Subset(training_sequence, validation_index)
 
+            train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=False)
+            validation_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False)
 
-def read_file_names(file_path, path, index_start, index_end):
-    dir = "~/Documents/pythonScripts/new/" + path + "/"
-    expanded_path = os.path.expanduser(dir)
-    g0 = os.listdir(expanded_path)
-    g0 = g0[index_start: index_end]
-    g0_files = [expanded_path + filename for filename in g0]
-    append_to_file(file_path, "jobs group " + path)
-    append_to_file(file_path, str(g0))
-    return g0_files
-
-
-def read_files(training_files, training):
-    training_files_csv = list()
-    for file in training_files:
-        df_train = pd.read_csv(file, sep=",")
-        if (training):
-            get_min_max_values_of_training_data(df_train)
-        training_files_csv.append(df_train)
-    return training_files_csv
+            train_model(train_loader, model, optimizer=optimizer, device=device, t=t)
+        test_model(validation_loader, model, optimizer, ix_epoch, device=device, t=t)
 
 
 def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], target=["mean_CPU_usage"],
@@ -319,7 +330,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     torch.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    file_path = 'transformer.txt'
+    file_path = 'lstm_univariate_bidirectional_all_at_once.txt'
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", epochs=" + str(epochs))
     start_time = time.time()
     scheduler = ASHAScheduler(
@@ -330,31 +341,25 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         reduction_factor=2)  # if it is set to 2, then half of the configurations survive each round.
     reporter = CLIReporter(
         metric_columns=["loss", "r2", "training_iteration"])
-    #Best trial config: {'sequence_length': 1, 'd_model': 32, 'nhead': 1, 'dim_feedforward': 64, 'num_layers': 1, 'lr': 2.0728938773827123e-05, 'batch_size': 16}
- #Best trial config: {'sequence_length': 1, 'd_model': 16, 'nhead': 1, 'dim_feedforward': 64, 'num_layers': 1, 'lr': 1.8196927794602183e-05, 'batch_size': 32}
-    #Best trial config: {'sequence_length': 1, 'd_model': 16, 'nhead': 1, 'dim_feedforward': 64, 'num_layers': 1, 'lr': 1.3967205462958928e-05, 'batch_size': 32}
-
     config = {
         "sequence_length": sequence_length,
-        "d_model": tune.grid_search([8, 16]),
-        "nhead": tune.grid_search([1]),
-        "dim_feedforward": tune.grid_search([64]),
-        "num_layers": tune.grid_search([1]),
-        "lr": tune.loguniform(0.00001, 0.00005),  # takes lower and upper bound
-        "batch_size": tune.grid_search([16, 32]),
+        "units": tune.grid_search([64, 128]),
+        "layers": tune.grid_search([2, 3]),
+        "lin_layers": tune.grid_search([100, 200]),
+        "lr": tune.loguniform(0.0001, 0.0005),  # takes lower and upper bound
+        "batch_size": tune.grid_search([8,  16]),
     }
-    training_files = read_file_names(file_path, "0", 0, 50)
-    training_files_csv = read_files(training_files, True)
-    validation_files = read_file_names(file_path, "0", 50, 100)
-    validation_files_csv = read_files(validation_files, False)
-    test_files = read_file_names(file_path, "1", 0, 50)
-    test_files_csv = read_files(test_files, False)
+    df = pd.read_csv("../../sortedGroupedJobFiles/3418324.csv", sep=",")
+    # split into training and test set - check until what index the training data is
+    test_head = int(len(df) * 0.7)
+    df_train = df.iloc[:test_head, :]
+    get_min_max_values_of_training_data(df_train)
+    df_test = df.iloc[test_head - sequence_length:, :]
     device = "cpu"
     if torch.cuda.is_available():
         device = "cuda:0"
     result = tune.run(
-        partial(train_and_test_model, training_files=training_files, validation_files=validation_files, t=t,
-                epochs=epochs, features=features,
+        partial(train_and_test_model, training_data_file=df_train, t=t, epochs=epochs, features=features,
                 target=target, device=device),
         resources_per_trial={"cpu": 4, "gpu": 0.25},
         # By default, Tune automatically runs N concurrent trials, where N is the number of CPUs (cores) on your machine.
@@ -367,23 +372,20 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         print(trial.metric_analysis)
     # retrieve the best trial from a Ray Tune experiment using the get_best_trial() method of the tune.ExperimentAnalysis object.
     # three arguments: the name of the metric to optimize, the direction of optimization ("min" for minimizing the metric or "max" for maximizing it), and the mode for selecting the best trial ("last" for selecting the last trial that achieved the best metric value, or "all" for selecting all trials that achieved the best metric value).
-
     best_trial = result.get_best_trial("loss", "min", "last")
     training_time = round((time.time() - start_time), 2)
     print("Best trial config: {}".format(best_trial.config))
     print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
     print("Best trial final validation r2: {}".format(best_trial.last_result["r2"]))
     append_to_file(file_path,
-                   "dm=" + str(best_trial.config["d_model"]) + ", nh=" + str(
-                       best_trial.config["nhead"]) + ", lr=" + str(
+                   "u=" + str(best_trial.config["units"]) + ", l=" + str(best_trial.config["layers"]) + ", lr=" + str(
                        round(best_trial.config["lr"], 5)) + ", bs=" +
-                   str(best_trial.config["batch_size"]) + ", df=" +
-                   str(best_trial.config["dim_feedforward"]) + ", nl=" +
-                   str(best_trial.config["num_layers"]))
+                   str(best_trial.config["batch_size"]) + ", ll=" +
+                   str(best_trial.config["lin_layers"]))
 
-    best_trained_model = TimeSeriesTransformer(len(features), t, best_trial.config["d_model"],
-                                               best_trial.config["nhead"], best_trial.config["dim_feedforward"],
-                                               best_trial.config["num_layers"], sequence_length)
+    best_trained_model = RegressionLSTM(num_sensors=len(features), num_hidden_units=best_trial.config["units"],
+                                        num_layers=best_trial.config["layers"], t=t, dropout=0,
+                                        lin_layers=best_trial.config["lin_layers"])
     best_trained_model.to(device)
 
     best_checkpoint_dir = best_trial.checkpoint.dir_or_data
@@ -392,40 +394,25 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     model_state, optimizer_state = torch.load(os.path.join(
         best_checkpoint_dir, "checkpoint"))
     best_trained_model.load_state_dict(model_state)
-
-    training_data = list()
-    test_data = list()
-    validation_data = list()
-    for df_train in training_files_csv:
-        training_sequence = get_training_data(t, target, features, df_train, best_trial.config)
-        training_data.append(training_sequence)
-    for df_test in test_files_csv:
-        training_sequence = get_test_data(t, target, features, df_test, best_trial.config)
-        test_data.append(training_sequence)
-    for df_validation in validation_files_csv:
-        validation_sequence = get_test_data(t, target, features, df_validation, config)
-        validation_data.append(validation_sequence)
-
+    # get normalized sequence data
+    test_data_files_sequence = get_test_data(t, target, features, df_test, best_trial.config)
+    training_data_files_sequence = get_training_data(t, target, features, df_train, best_trial.config)
     print("Get test results")
-    pred_cpu_test, act_cpu_test = get_prediction_results(t, target, test_data,
+    pred_cpu_test, act_cpu_test = get_prediction_results(t, target, test_data_files_sequence,
                                                          best_trained_model,
                                                          device,
                                                          best_trial.config)
     print("Get training results")
-    pred_cpu_train, act_cpu_train = get_prediction_results(t, target, training_data, best_trained_model,
+    pred_cpu_train, act_cpu_train = get_prediction_results(t, target, training_data_files_sequence, best_trained_model,
                                                            device, best_trial.config)
-
-    print("Get validation results")
-    pred_cpu_validation, act_cpu_validation = get_prediction_results(t, target, validation_data, best_trained_model,
-                                                                     device, best_trial.config)
-
     print("calculate results")
-    calculate_prediction_results(t, pred_cpu_train, act_cpu_train, start_time, training_time, "new_data_filtered_train")
-    calculate_prediction_results(t, pred_cpu_test, act_cpu_test, start_time, training_time, "new_data_filtered_test")
-    calculate_prediction_results(t, pred_cpu_validation, act_cpu_validation, start_time, training_time,
-                                 "new_data_filtered_validation")
+    calculate_prediction_results(t, pred_cpu_test.cpu(), act_cpu_test.cpu(), pred_cpu_train.cpu(),
+                                 act_cpu_train.cpu(), file_path, start_time, training_time)
+    plot_results(t, pred_cpu_test.cpu(), act_cpu_test.cpu(), best_trial.config["sequence_length"],
+                 target, df)
 
 
 if __name__ == "__main__":
-    main(t=6, sequence_length=1, epochs=100, features=['mean_CPU_usage'],
-         target=['mean_CPU_usage'], num_samples=2)
+    for history in (1, 6, 12):
+        main(t=6, sequence_length=history, epochs=100, features=['mean_CPU_usage'],
+             target=['mean_CPU_usage'], num_samples=2)

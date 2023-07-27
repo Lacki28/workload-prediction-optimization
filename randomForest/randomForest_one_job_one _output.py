@@ -68,14 +68,15 @@ def plot_results(t, sequence_length, df, actual_values_cpu, predictions_cpu, tar
         current_predictions_cpu = predictions_cpu[:, i]
         current_actual_values_cpu = actual_values_cpu[:, i]
         fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(12, 10))
+        plt.subplots_adjust(bottom=0.2)  # Adjust the value as needed
         axs.plot(indices, current_actual_values_cpu, label='actual ' + target, linewidth=1, color='orange')
         axs.plot(indices, current_predictions_cpu, label='predicted ' + target, linewidth=1, color='blue', linestyle='dashed')
-        axs.set_xlabel('Time')
+        axs.set_xlabel('Time', fontsize=18)
         plt.xticks(rotation=45)  # 'vertical')
         plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
-        axs.set_ylabel(target)
-        axs.set_title('Random forest ' + target + ' prediction h=' + str(sequence_length) + ', t=' + str(i+1))
-        axs.legend()
+        axs.set_ylabel(target, fontsize=18)
+        axs.set_title('Random forest ' + target + ' prediction h=' + str(sequence_length) + ', t=' + str(i+1), fontsize=20)
+        axs.legend(fontsize=16)
         plt.savefig(str(max_depth)+'_rf_' + 'h' + str(sequence_length) + '_t' + str(i+1) + '' + '.png')
 
 
@@ -93,9 +94,9 @@ def create_sliding_window(t, sequence_length, x_data, y_data):
 
 
 def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_usage", trees=200, max_depth=3):
-    file_path = 'results/rf.txt'
+    file_path = 'rf.txt'
     start_time = time.time()
-    df = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",")
+    df = pd.read_csv("../../sortedGroupedJobFiles/3418324.csv", sep=",")
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length))
     append_to_file(file_path, 'trees=' + str(trees) + ', max depth=' + str(max_depth))
     # create correct index
@@ -137,7 +138,6 @@ def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_us
 
 
 if __name__ == "__main__":
-
     for history in (1, 6, 12):
         for max_depth in (3, 4):
             main(6, history, 'mean_CPU_usage', 'mean_CPU_usage', 150, max_depth)

@@ -63,8 +63,6 @@ def plot_results(t, sequence_length, df, y_test, y_prediction, target):
     axs.set_title('Random forest ' + target + ' prediction h=' + str(sequence_length) + ', t=' + str(t))
     axs.legend()
     plt.savefig('rf' + 'h' + str(sequence_length) + '_t' + str(t) + '' + '.png')
-    plt.show()
-
 
 def plot_results(t, predictions_cpu, predictions_mem, actual_values_cpu, actual_values_mem, sequence_length, target,
                  df):

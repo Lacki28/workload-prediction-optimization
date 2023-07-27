@@ -40,27 +40,41 @@ class SequenceDataset(Dataset):
             x = torch.cat((padding, x), 0)
         return x, self.y[i: i + self.t]  # return target n time stamps ahead
 
-class TimeSeriesTransformer(nn.Module):
 
-    def __init__(self, input_dim, output_dim, d_model, nhead, dim_feedforward, num_layers, sequence_length):
-        super(TimeSeriesTransformer, self).__init__()
-        self.embedding = nn.Linear(input_dim, d_model)
-        self.transformer_encoder = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward),
-            num_layers=num_layers
+class RegressionLSTM(nn.Module):
+    def __init__(self, num_sensors, num_hidden_units, num_layers, t, dropout, lin_layers):
+        super().__init__()
+        self.input_size = num_sensors  # this is the number of features
+        self.hidden_units = num_hidden_units
+        self.num_layers = num_layers
+        self.t = t
+
+        self.lstm = nn.LSTM(
+            input_size=num_sensors,  # the number of expected features in the input x
+            hidden_size=num_hidden_units,  # The number of features in the hidden state h
+            batch_first=True,
+            bidirectional=False,
+            dropout=dropout,
+            num_layers=self.num_layers  # number of layers that have some hidden units
         )
+        self.fc_cpu = nn.Linear(num_hidden_units, lin_layers)
+        self.fc_cpu1 = nn.Linear(lin_layers, lin_layers)
+        self.fc_cpu2 = nn.Linear(lin_layers, t)
+        self.relu = nn.ReLU()
 
-        self.decoder = nn.Linear(d_model * sequence_length, output_dim)
+    def forward(self, x):
+        # BiLSTM
+        output, (hn, cn) = self.lstm(x)  # (input, hidden, and internal state)
+        output = output[:, -1, :]
 
-    def forward(self, input):
-        batch_size, seq_len, input_dim = input.size()
-        input = input.transpose(0, 1)  # Shape: (seq_len, batch_size, input_dim)
-        input = self.embedding(input)  # Shape: (seq_len, batch_size, d_model)
+        # fully connected layers
+        out_cpu = self.relu(output)
+        out_cpu = self.fc_cpu(out_cpu)
+        out_cpu = self.fc_cpu1(out_cpu)
+        out_cpu = self.fc_cpu2(out_cpu)
 
-        output = self.transformer_encoder(input)  # Shape: (seq_len, batch_size, d_model)
-        output = output.view(batch_size, -1)  # Shape: (batch_size, seq_len * d_model)
-        output = self.decoder(output)  # Shape: (batch_size, output_dim)
-        return output
+        return out_cpu
+
 
 def mse(prediction, real_value):
     MSE = torch.square(torch.subtract(real_value, prediction)).mean()
@@ -126,6 +140,7 @@ def test_model(data_loader, model, optimizer, ix_epoch, device, t):
     loss = (loss_cpu / len(data_loader)).item()
     r2 = (r2 / len(data_loader))
     return r2, loss
+
 
 def train_model(data_loader, model, optimizer, device, t):
     model.train()
@@ -197,6 +212,7 @@ def get_prediction_results(t, target, test_data, best_trained_model, device, con
     pred_denorm_cpus = list()
     act_denorm_cpus = list()
     for data in test_data:
+        print("H")
         test_eval_loader = DataLoader(data, batch_size=1, shuffle=False, num_workers=1)
         prediction_test_cpu = predict(test_eval_loader, best_trained_model, device)
         denorm_cpu = denormalize_data_minMax(target[0], prediction_test_cpu)
@@ -263,8 +279,8 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_files=Non
         train_loader = DataLoader(validation_sequence, batch_size=config["batch_size"], shuffle=False)
         validation_loaders.append(train_loader)
 
-    model = TimeSeriesTransformer(len(features), t, config["d_model"], config["nhead"],
-                                  config["dim_feedforward"], config["num_layers"], config["sequence_length"])
+    model = RegressionLSTM(num_sensors=len(features), num_hidden_units=config["units"], num_layers=config["layers"],
+                           t=t, dropout=0.2, lin_layers=config['lin_layers'])
     # Wrap the model in nn.DataParallel to support data parallel training on multiple GPUs:
     if torch.cuda.is_available():
         if torch.cuda.device_count() > 1:
@@ -277,19 +293,18 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_files=Non
         model.load_state_dict(model_state)
         optimizer.load_state_dict(optimizer_state)
 
-
     for ix_epoch in range(epochs):  # in each epoch, train with the file that performs worse
-        r2s =list()
-        losses =list()
+        r2s = list()
+        losses = list()
         for training_loader in training_loaders:
-            # validation_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False
             train_model(training_loader, model, optimizer=optimizer, device=device, t=t)
         for validation_loader in validation_loaders:
-            r2, loss=test_model(validation_loader, model, optimizer, ix_epoch, device=device, t=t)
+            r2, loss = test_model(validation_loader, model, optimizer, ix_epoch, device=device, t=t)
             r2s.append(r2)
             losses.append(loss)
         tune.report(r2=sum(r2s),
-                    loss=sum(losses))  # The tune.report() function is used to report the loss and r2 of the model to the Ray Tune framework. This function takes a dictionary of metrics as input, where the keys are the names of the metrics and the values are the metric values.
+                    loss=sum(
+                        losses))  # The tune.report() function is used to report the loss and r2 of the model to the Ray Tune framework. This function takes a dictionary of metrics as input, where the keys are the names of the metrics and the values are the metric values.
 
 
 def read_file_names(file_path, path, index_start, index_end):
@@ -319,7 +334,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     torch.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    file_path = 'transformer.txt'
+    file_path = 'lstm_univariate_trained_new_data_filtered.txt'
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", epochs=" + str(epochs))
     start_time = time.time()
     scheduler = ASHAScheduler(
@@ -330,17 +345,12 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         reduction_factor=2)  # if it is set to 2, then half of the configurations survive each round.
     reporter = CLIReporter(
         metric_columns=["loss", "r2", "training_iteration"])
-    #Best trial config: {'sequence_length': 1, 'd_model': 32, 'nhead': 1, 'dim_feedforward': 64, 'num_layers': 1, 'lr': 2.0728938773827123e-05, 'batch_size': 16}
- #Best trial config: {'sequence_length': 1, 'd_model': 16, 'nhead': 1, 'dim_feedforward': 64, 'num_layers': 1, 'lr': 1.8196927794602183e-05, 'batch_size': 32}
-    #Best trial config: {'sequence_length': 1, 'd_model': 16, 'nhead': 1, 'dim_feedforward': 64, 'num_layers': 1, 'lr': 1.3967205462958928e-05, 'batch_size': 32}
-
-    config = {
+    config = {  #
         "sequence_length": sequence_length,
-        "d_model": tune.grid_search([8, 16]),
-        "nhead": tune.grid_search([1]),
-        "dim_feedforward": tune.grid_search([64]),
-        "num_layers": tune.grid_search([1]),
-        "lr": tune.loguniform(0.00001, 0.00005),  # takes lower and upper bound
+        "units": tune.grid_search([128, 256]),
+        "layers": tune.grid_search([4, 5]),
+        "lin_layers": tune.grid_search([200, 300]),
+        "lr": tune.loguniform(0.00001, 0.00008),  # takes lower and upper bound
         "batch_size": tune.grid_search([16, 32]),
     }
     training_files = read_file_names(file_path, "0", 0, 50)
@@ -367,23 +377,20 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         print(trial.metric_analysis)
     # retrieve the best trial from a Ray Tune experiment using the get_best_trial() method of the tune.ExperimentAnalysis object.
     # three arguments: the name of the metric to optimize, the direction of optimization ("min" for minimizing the metric or "max" for maximizing it), and the mode for selecting the best trial ("last" for selecting the last trial that achieved the best metric value, or "all" for selecting all trials that achieved the best metric value).
-
-    best_trial = result.get_best_trial("loss", "min", "last")
+    best_trial = result.get_best_trial("r2", "max", "last")
     training_time = round((time.time() - start_time), 2)
     print("Best trial config: {}".format(best_trial.config))
     print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
     print("Best trial final validation r2: {}".format(best_trial.last_result["r2"]))
     append_to_file(file_path,
-                   "dm=" + str(best_trial.config["d_model"]) + ", nh=" + str(
-                       best_trial.config["nhead"]) + ", lr=" + str(
+                   "u=" + str(best_trial.config["units"]) + ", l=" + str(best_trial.config["layers"]) + ", lr=" + str(
                        round(best_trial.config["lr"], 5)) + ", bs=" +
-                   str(best_trial.config["batch_size"]) + ", df=" +
-                   str(best_trial.config["dim_feedforward"]) + ", nl=" +
-                   str(best_trial.config["num_layers"]))
+                   str(best_trial.config["batch_size"]) + ", ll=" +
+                   str(best_trial.config["lin_layers"]))
 
-    best_trained_model = TimeSeriesTransformer(len(features), t, best_trial.config["d_model"],
-                                               best_trial.config["nhead"], best_trial.config["dim_feedforward"],
-                                               best_trial.config["num_layers"], sequence_length)
+    best_trained_model = RegressionLSTM(num_sensors=len(features), num_hidden_units=best_trial.config["units"],
+                                        num_layers=best_trial.config["layers"], t=t, dropout=0,
+                                        lin_layers=best_trial.config["lin_layers"])
     best_trained_model.to(device)
 
     best_checkpoint_dir = best_trial.checkpoint.dir_or_data
@@ -427,5 +434,5 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
 
 if __name__ == "__main__":
-    main(t=6, sequence_length=1, epochs=100, features=['mean_CPU_usage'],
+    main(t=6, sequence_length=1, epochs=200, features=['mean_CPU_usage'],
          target=['mean_CPU_usage'], num_samples=2)

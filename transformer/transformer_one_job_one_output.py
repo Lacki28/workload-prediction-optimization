@@ -15,7 +15,6 @@ from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 from sklearn.model_selection import KFold
 from torch.utils.data import Dataset, DataLoader
-from torchvision.models.video.mvit import PositionalEncoding
 
 min_max_dict = {}
 
@@ -42,7 +41,6 @@ class SequenceDataset(Dataset):
             x = self.X[0:(i + 1), :]
             x = torch.cat((padding, x), 0)
         return x, self.y[i: i + self.t]  # return target n time stamps ahead
-
 
 
 class TimeSeriesTransformer(nn.Module):
@@ -96,10 +94,10 @@ def my_loss_fn(output, target):
 
 
 def my_r2_fn(output, target):
-    output_has_nan = torch.isnan(output).any().item()
+    output_has_nan = torch.isnan(output.cpu()).any().item()
     if output_has_nan:
         return - math.inf
-    r2 = sm.r2_score(target, output)
+    r2 = sm.r2_score(target.cpu(), output.cpu())
     if math.isnan(r2):
         return - math.inf
     return r2
@@ -155,7 +153,7 @@ def train_model(data_loader, model, optimizer, device, t):
 
 
 def predict(data_loader, model, device):
-    cpu = torch.tensor([])
+    cpu = torch.empty(0, device=device)  # Initialize an empty tensor on the desired device
     model.eval()
     with torch.no_grad():
         for i, (X, y) in enumerate(data_loader):
@@ -230,12 +228,13 @@ def plot_results(t, predictions_cpu, actual_values_cpu, sequence_length, target,
                  color='orange')
         axs.plot(indices, current_predictions_cpu, label='predicted ' + target[0], linewidth=1,
                  color='blue', linestyle='dashed')
-        axs.set_xlabel('Time')
+        axs.set_xlabel('Time', fontsize=18)
         plt.xticks(rotation=45)  # 'vertical')
         plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
-        axs.set_ylabel(target[0])
-        axs.set_title('Transformer ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(i + 1))
-        axs.legend()
+        axs.set_ylabel(target[0], fontsize=18)
+        axs.set_title('Transformer ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(i + 1),
+                      fontsize=20)
+        axs.legend(fontsize=16)
         plt.savefig('Transformer_' + 'h' + str(sequence_length) + '_t' + str(i + 1) + '' + '.png')
 
 
@@ -289,7 +288,7 @@ def get_test_data(t, target, features, df_test=None, config=None):
 
 
 def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file=None, t=None, epochs=None,
-                         features=None, target=None, file_path=None):
+                         features=None, target=None):
     model = TimeSeriesTransformer(len(features), t, config["d_model"], config["nhead"],
                                   config["dim_feedforward"], config["num_layers"], config["sequence_length"])
 
@@ -323,7 +322,11 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
 
 def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], target=["mean_CPU_usage"],
          num_samples=100):
-    file_path = 'results/transformer_univariate_tests.txt'
+    seed = 28
+    torch.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    file_path = 'transformer_univariate_tests.txt'
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", epochs=" + str(epochs))
     start_time = time.time()
     scheduler = ASHAScheduler(
@@ -343,7 +346,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         "lr": tune.loguniform(0.00001, 0.0009),  # takes lower and upper bound
         "batch_size": tune.grid_search([4, 8, 16]),
     }
-    df = pd.read_csv("../../sortedGroupedJobFiles/3418324.csv", sep=",")
+    df = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",")
     # split into training and test set - check until what index the training data is
     test_head = int(len(df) * 0.7)
     df_train = df.iloc[:test_head, :]
@@ -351,8 +354,8 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     df_test = df.iloc[test_head - sequence_length:, :]
     result = tune.run(
         partial(train_and_test_model, training_data_file=df_train, t=t, epochs=epochs, features=features,
-                target=target, file_path=file_path),
-        resources_per_trial={"cpu": 4},
+                target=target),
+        # resources_per_trial={"cpu": 4, "gpu": 0.25},
         # By default, Tune automatically runs N concurrent trials, where N is the number of CPUs (cores) on your machine.
         config=config,
         num_samples=num_samples,  # how often I sample from hyperparameters
@@ -380,9 +383,6 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
                                                best_trial.config["nhead"], best_trial.config["dim_feedforward"],
                                                best_trial.config["num_layers"], sequence_length)
 
-    device = "cpu"
-    # if torch.cuda.is_available():
-    #     device = "cuda:0"
     best_trained_model.to(device)
 
     best_checkpoint_dir = best_trial.checkpoint.dir_or_data
@@ -403,9 +403,9 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     pred_cpu_train, act_cpu_train = get_prediction_results(t, target, training_data_files_sequence, best_trained_model,
                                                            device, best_trial.config)
     print("calculate results")
-    calculate_prediction_results(t, pred_cpu_test, act_cpu_test, pred_cpu_train,
-                                 act_cpu_train, file_path, start_time, training_time)
-    plot_results(t, pred_cpu_test, act_cpu_test, best_trial.config["sequence_length"],
+    calculate_prediction_results(t, pred_cpu_test.cpu(), act_cpu_test.cpu(), pred_cpu_train.cpu(),
+                                 act_cpu_train.cpu(), file_path, start_time, training_time)
+    plot_results(t, pred_cpu_test.cpu(), act_cpu_test.cpu(), best_trial.config["sequence_length"],
                  target, df)
 
 

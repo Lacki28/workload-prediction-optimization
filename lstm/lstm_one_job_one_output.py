@@ -13,7 +13,6 @@ from matplotlib import pyplot as plt, ticker
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
-from scipy.signal import savgol_filter
 from sklearn.model_selection import KFold
 from torch.utils.data import Dataset, DataLoader
 
@@ -43,6 +42,7 @@ class SequenceDataset(Dataset):
             x = torch.cat((padding, x), 0)
         return x, self.y[i: i + self.t]  # return target n time stamps ahead
 
+
 class RegressionLSTM(nn.Module):
     def __init__(self, num_sensors, num_hidden_units, num_layers, t, dropout, lin_layers):
         super().__init__()
@@ -54,7 +54,7 @@ class RegressionLSTM(nn.Module):
         self.lstm = nn.LSTM(
             input_size=num_sensors,  # the number of expected features in the input x
             hidden_size=num_hidden_units,  # The number of features in the hidden state h
-                batch_first=False,
+            batch_first=False,
             bidirectional=False,
             dropout=dropout,
             num_layers=self.num_layers  # number of layers that have some hidden units
@@ -144,7 +144,7 @@ def test_model(data_loader, model, optimizer, ix_epoch, device, t):
                    path)  # The torch.save() function saves the state of the PyTorch model and optimizer as a dictionary containing the state of each object.
     loss_cpu = (loss_cpu / len(data_loader)).item()
     r2 = (r2 / len(data_loader))
-    tune.report( r2=r2,
+    tune.report(r2=r2,
                 loss=loss_cpu)  # The tune.report() function is used to report the loss and r2 of the model to the Ray Tune framework. This function takes a dictionary of metrics as input, where the keys are the names of the metrics and the values are the metric values.
 
 
@@ -171,6 +171,7 @@ def predict(data_loader, model, device):
             y_prediction_cpu = model(X)
             cpu = torch.cat((cpu, y_prediction_cpu), 0)
     return cpu
+
 
 def calc_MSE_Accuracy(t, y_test, y_test_pred, file_path, start_time, training_time):
     mae = round(sm.mean_absolute_error(y_test, y_test_pred), 5)
@@ -237,13 +238,13 @@ def plot_results(t, predictions_cpu, actual_values_cpu, sequence_length, target,
                  color='orange')
         axs.plot(indices, current_predictions_cpu, label='predicted ' + target[0], linewidth=1,
                  color='blue', linestyle='dashed')
-        axs.set_xlabel('Time')
+        axs.set_xlabel('Time', fontsize=18)
         plt.xticks(rotation=45)  # 'vertical')
         plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
-        axs.set_ylabel(target[0])
-        axs.set_title('LSTM ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(i + 1))
-        axs.legend()
-        plt.savefig('LSTM_bi_directional_' + 'h' + str(sequence_length) + '_t' + str(i + 1) + '' + '.png')
+        axs.set_ylabel(target[0], fontsize=18)
+        axs.set_title('LSTM ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(i + 1), fontsize=20)
+        axs.legend(fontsize=16)
+        plt.savefig('LSTM_' + 'h' + str(sequence_length) + '_t' + str(i + 1) + '' + '.png')
 
 
 def get_prediction_results(t, target, test_dataset, best_trained_model, device, config):
@@ -326,6 +327,10 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file
 
 def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], target=["mean_CPU_usage"],
          num_samples=100):
+    seed = 28
+    torch.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     file_path = 'lstm_univariate_bidirectional_all_at_once.txt'
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", epochs=" + str(epochs))
     start_time = time.time()
@@ -342,8 +347,8 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         "units": tune.grid_search([64, 128]),
         "layers": tune.grid_search([2, 3]),
         "lin_layers": tune.grid_search([200]),
-        "lr": tune.loguniform(0.0001, 0.001),  # takes lower and upper bound
-        "batch_size": tune.grid_search([8,  16, 32]),
+        "lr": tune.loguniform(0.0001, 0.0009),  # takes lower and upper bound
+        "batch_size": tune.grid_search([8, 16, 32]),
     }
     df = pd.read_csv("../../sortedGroupedJobFiles/3418324.csv", sep=",")
     # split into training and test set - check until what index the training data is
@@ -409,6 +414,6 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
 
 if __name__ == "__main__":
-    for history in (1, 2, 6, 12):
+    for history in (1, 6, 12):
         main(t=6, sequence_length=history, epochs=100, features=['mean_CPU_usage'],
              target=['mean_CPU_usage'], num_samples=2)

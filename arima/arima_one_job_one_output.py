@@ -80,16 +80,16 @@ def plot_results(t, sequence_length, df, actual_values_cpu, predictions_cpu, tar
         # current_actual_values_cpu = actual_values_cpu[:, i]
         fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(12, 10))
         plt.subplots_adjust(bottom=0.2)  # Adjust the value as needed
-        axs.plot(indices, current_actual_values_cpu, label='actual ' + target[0], linewidth=1,
+        axs.plot(indices, current_actual_values_cpu, label='actual ' + target, linewidth=1,
                  color='orange')
-        axs.plot(indices, current_predictions_cpu, label='predicted ' + target[0], linewidth=1,
+        axs.plot(indices, current_predictions_cpu, label='predicted ' + target, linewidth=1,
                  color='blue', linestyle='dashed')
-        axs.set_xlabel('Time')
+        axs.set_xlabel('Time', fontsize=18)
         plt.xticks(rotation=45)  # 'vertical')
         plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
-        axs.set_ylabel(target[0])
-        axs.set_title('LSTM ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(i + 1))
-        axs.legend()
+        axs.set_ylabel(target, fontsize=18)
+        axs.set_title('ARIMA ' + target + ' prediction h=' + str(sequence_length) + ', t=' + str(i + 1), fontsize=20)
+        axs.legend(fontsize=16)
         plt.savefig('ARIMA_' + 'h' + str(sequence_length) + '_t' + str(i + 1) + '' + '.png')
 
 
