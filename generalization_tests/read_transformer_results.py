@@ -25,6 +25,7 @@ def create_boxplot(loss, name, timestamp, dir):
     plt.ylabel('Metric')
     plt.title('Transformer loss values for ' + str(timestamp + 1) + ' ahead prediction')
     plt.savefig('Transformer_' + dir + '_' + name + '_loss_t' + str(timestamp + 1) + '.png')
+    plt.close()
 
 
 def calc_avg(lst):

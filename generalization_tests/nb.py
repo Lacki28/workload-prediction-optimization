@@ -196,5 +196,5 @@ def main(t,sequence_length, target, features):
 
 
 if __name__ == "__main__":
-    for t in (1, 2, 3, 6):
+    for t in (1, 2, 3, 4, 5, 6):
         main(t, 1, 'mean_CPU_usage', 'mean_CPU_usage')
