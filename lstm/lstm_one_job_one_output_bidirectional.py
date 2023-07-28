@@ -54,7 +54,7 @@ class RegressionLSTM(nn.Module):
         self.lstm = nn.LSTM(
             input_size=num_sensors,  # the number of expected features in the input x
             hidden_size=num_hidden_units,  # The number of features in the hidden state h
-            batch_first=False,
+            batch_first=True,
             bidirectional=True,
             dropout=dropout,
             num_layers=self.num_layers  # number of layers that have some hidden units

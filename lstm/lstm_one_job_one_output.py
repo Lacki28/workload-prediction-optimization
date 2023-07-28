@@ -54,7 +54,7 @@ class RegressionLSTM(nn.Module):
         self.lstm = nn.LSTM(
             input_size=num_sensors,  # the number of expected features in the input x
             hidden_size=num_hidden_units,  # The number of features in the hidden state h
-            batch_first=False,
+            batch_first=True,
             bidirectional=False,
             dropout=dropout,
             num_layers=self.num_layers  # number of layers that have some hidden units
@@ -65,6 +65,7 @@ class RegressionLSTM(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
+        print(x)
         output, (hn, cn) = self.lstm(x)  # (input, hidden, and internal state)
 
         output = output[:, -1, :]
@@ -333,7 +334,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     torch.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    file_path = 'lstm_univariate_bidirectional_all_at_once.txt'
+    file_path = 'lstm_univariate_all_at_once.txt'
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", epochs=" + str(epochs))
     start_time = time.time()
     scheduler = ASHAScheduler(

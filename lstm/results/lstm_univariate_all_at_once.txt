@@ -1,0 +1,153 @@
+t=6, sequence length=1, epochs=100
+u=64, l=2, lr=0.00011, bs=32, ll=200
+/home/anna/ray_results/train_and_test_model_2023-07-28_10-43-02/train_and_test_model_c3878_00002_2_batch_size=32,layers=2,lin_layers=200,lr=0.0001,units=64_2023-07-28_10-43-04/checkpoint_000099
+1 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00012 & 7.3603934e-07 & -0.16675 & 0.65337 & 432.54 & 437.84
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00011 & 5.250495e-08 & 0.7283 & 0.57452 & 432.54 & 437.84
+
+2 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00013 & 4.6362828e-07 & 0.26515 & 0.85026 & 432.54 & 437.84
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00014 & 7.4390904e-08 & 0.61476 & 0.8057 & 432.54 & 437.84
+
+3 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00015 & 4.5961366e-07 & 0.27161 & 1.00564 & 432.54 & 437.85
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00016 & 8.936567e-08 & 0.53651 & 0.99891 & 432.54 & 437.85
+
+4 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00016 & 4.5948616e-07 & 0.27189 & 1.17213 & 432.54 & 437.85
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00018 & 1.0064328e-07 & 0.47731 & 1.19668 & 432.54 & 437.85
+
+5 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00017 & 4.6531557e-07 & 0.26283 & 1.46154 & 432.54 & 437.85
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00019 & 1.1485078e-07 & 0.40251 & 1.4995 & 432.54 & 437.85
+
+6 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00019 & 1.0014438e-06 & 0.14446 & 3.07982 & 432.54 & 437.85
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.0002 & 1.2332453e-07 & 0.35759 & 2.77483 & 432.54 & 437.85
+
+t=6, sequence length=6, epochs=100
+u=64, l=2, lr=0.00015, bs=32, ll=200
+/home/anna/ray_results/train_and_test_model_2023-07-28_10-50-54/train_and_test_model_dceeb_00002_2_batch_size=32,layers=2,lin_layers=200,lr=0.0001,units=64_2023-07-28_10-50-56/checkpoint_000099
+1 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00013 & 1.0443613e-06 & -0.06295 & 0.71506 & 1100.22 & 1105.85
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00011 & 5.0735505e-08 & 0.73745 & 0.59124 & 1100.22 & 1105.86
+
+2 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00015 & 1.1445959e-06 & 0.13908 & 1.13177 & 1100.22 & 1105.86
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00014 & 7.32336e-08 & 0.62076 & 1.02884 & 1100.22 & 1105.86
+
+3 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00017 & 1.4953382e-06 & 0.1122 & 1.41655 & 1100.22 & 1105.86
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00016 & 9.228321e-08 & 0.52138 & 1.29144 & 1100.22 & 1105.86
+
+4 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00019 & 1.8429437e-06 & 0.0976 & 1.82624 & 1100.22 & 1105.86
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00018 & 1.0181182e-07 & 0.47124 & 1.67039 & 1100.22 & 1105.86
+
+5 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00021 & 2.3200312e-06 & 0.08013 & 2.1407 & 1100.22 & 1105.86
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00019 & 1.1129952e-07 & 0.42098 & 1.87504 & 1100.22 & 1105.86
+
+6 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00022 & 2.8601744e-06 & 0.06566 & 2.9509 & 1100.22 & 1105.86
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.0002 & 1.2100912e-07 & 0.36965 & 2.4117 & 1100.22 & 1105.86
+
+t=6, sequence length=12, epochs=100
+u=128, l=2, lr=0.00025, bs=8, ll=200
+/home/anna/ray_results/train_and_test_model_2023-07-28_11-09-32/train_and_test_model_77177_00006_6_batch_size=8,layers=2,lin_layers=200,lr=0.0002,units=128_2023-07-28_11-09-34/checkpoint_000099
+1 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00014 & 9.848633e-07 & 0.60818 & 0.65615 & 2246.05 & 2254.19
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00013 & 5.427651e-08 & 0.71913 & 0.6258 & 2246.05 & 2254.19
+
+2 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00022 & 3.1738252e-06 & -0.10962 & 1.14811 & 2246.05 & 2254.19
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00017 & 1.0271903e-07 & 0.46806 & 0.97015 & 2246.05 & 2254.19
+
+3 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00022 & 3.3507235e-06 & -0.04228 & 1.31841 & 2246.05 & 2254.19
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00018 & 1.2590343e-07 & 0.34701 & 1.14013 & 2246.05 & 2254.19
+
+4 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00026 & 2.8222225e-06 & 0.21001 & 1.30262 & 2246.05 & 2254.19
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00024 & 1.6433111e-07 & 0.14654 & 1.16105 & 2246.05 & 2254.19
+
+5 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00026 & 3.8780977e-06 & 0.04294 & 1.56398 & 2246.05 & 2254.19
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00021 & 1.3179327e-07 & 0.31437 & 1.3414 & 2246.05 & 2254.2
+
+6 timestamp ahead prediction
+TRAIN ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00028 & 4.5419297e-06 & 0.01066 & 1.64615 & 2246.05 & 2254.2
+TEST ERRORS CPU:
+mae & mse & r2 & nr & training & total
+0.00023 & 1.4102572e-07 & 0.26538 & 1.42247 & 2246.05 & 2254.2
+
