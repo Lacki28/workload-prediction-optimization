@@ -42,7 +42,6 @@ class SequenceDataset(Dataset):
             x = torch.cat((padding, x), 0)
         return x, self.y[i: i + self.t]  # return target n time stamps ahead
 
-
 class TimeSeriesTransformer(nn.Module):
 
     def __init__(self, input_dim, output_dim, d_model, nhead, dim_feedforward, num_layers, sequence_length):
@@ -64,7 +63,6 @@ class TimeSeriesTransformer(nn.Module):
         output = output.view(batch_size, -1)  # Shape: (batch_size, seq_len * d_model)
         output = self.decoder(output)  # Shape: (batch_size, output_dim)
         return output
-
 
 def mse(prediction, real_value):
     MSE = torch.square(torch.subtract(real_value, prediction)).mean()
@@ -94,10 +92,10 @@ def my_loss_fn(output, target):
 
 
 def my_r2_fn(output, target):
-    output_has_nan = torch.isnan(output.cpu()).any().item()
+    output_has_nan = torch.isnan(output).any().item()
     if output_has_nan:
         return - math.inf
-    r2 = sm.r2_score(target.cpu(), output.cpu())
+    r2 = sm.r2_score(target, output)
     if math.isnan(r2):
         return - math.inf
     return r2
@@ -153,7 +151,7 @@ def train_model(data_loader, model, optimizer, device, t):
 
 
 def predict(data_loader, model, device):
-    cpu = torch.empty(0, device=device)  # Initialize an empty tensor on the desired device
+    cpu = torch.tensor([])
     model.eval()
     with torch.no_grad():
         for i, (X, y) in enumerate(data_loader):
@@ -355,7 +353,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     result = tune.run(
         partial(train_and_test_model, training_data_file=df_train, t=t, epochs=epochs, features=features,
                 target=target),
-        # resources_per_trial={"cpu": 4, "gpu": 0.25},
+        resources_per_trial={"cpu": 4},
         # By default, Tune automatically runs N concurrent trials, where N is the number of CPUs (cores) on your machine.
         config=config,
         num_samples=num_samples,  # how often I sample from hyperparameters
@@ -383,6 +381,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
                                                best_trial.config["nhead"], best_trial.config["dim_feedforward"],
                                                best_trial.config["num_layers"], sequence_length)
 
+    device = "cpu"
     best_trained_model.to(device)
 
     best_checkpoint_dir = best_trial.checkpoint.dir_or_data
@@ -403,9 +402,9 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     pred_cpu_train, act_cpu_train = get_prediction_results(t, target, training_data_files_sequence, best_trained_model,
                                                            device, best_trial.config)
     print("calculate results")
-    calculate_prediction_results(t, pred_cpu_test.cpu(), act_cpu_test.cpu(), pred_cpu_train.cpu(),
-                                 act_cpu_train.cpu(), file_path, start_time, training_time)
-    plot_results(t, pred_cpu_test.cpu(), act_cpu_test.cpu(), best_trial.config["sequence_length"],
+    calculate_prediction_results(t, pred_cpu_test, act_cpu_test, pred_cpu_train,
+                                 act_cpu_train, file_path, start_time, training_time)
+    plot_results(t, pred_cpu_test, act_cpu_test, best_trial.config["sequence_length"],
                  target, df)
 
 

@@ -43,40 +43,27 @@ class SequenceDataset(Dataset):
         return x, self.y[i: i + self.t]  # return target n time stamps ahead
 
 
-class RegressionLSTM(nn.Module):
-    def __init__(self, num_sensors, num_hidden_units, num_layers, t, dropout, lin_layers):
-        super().__init__()
-        self.input_size = num_sensors  # this is the number of features
-        self.hidden_units = num_hidden_units
-        self.num_layers = num_layers
-        self.t = t
+class TimeSeriesTransformer(nn.Module):
 
-        self.lstm = nn.LSTM(
-            input_size=num_sensors,  # the number of expected features in the input x
-            hidden_size=num_hidden_units,  # The number of features in the hidden state h
-            batch_first=False,
-            bidirectional=False,
-            dropout=dropout,
-            num_layers=self.num_layers  # number of layers that have some hidden units
+    def __init__(self, input_dim, output_dim, d_model, nhead, dim_feedforward, num_layers, sequence_length):
+        super(TimeSeriesTransformer, self).__init__()
+        self.embedding = nn.Linear(input_dim, d_model)
+        self.transformer_encoder = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward),
+            num_layers=num_layers
         )
-        self.fc_cpu = nn.Linear(num_hidden_units, lin_layers)
-        self.fc_cpu1 = nn.Linear(lin_layers, lin_layers)
-        self.fc_cpu2 = nn.Linear(lin_layers, t)
-        self.relu = nn.ReLU()
 
-    def forward(self, x):
-        output, (hn, cn) = self.lstm(x)  # (input, hidden, and internal state)
+        self.decoder = nn.Linear(d_model * sequence_length, output_dim)
 
-        output = output[:, -1, :]
+    def forward(self, input):
+        batch_size, seq_len, input_dim = input.size()
+        input = input.transpose(0, 1)  # Shape: (seq_len, batch_size, input_dim)
+        input = self.embedding(input)  # Shape: (seq_len, batch_size, d_model)
 
-        # attention layer
-        # fully connected layers
-        out_cpu = self.relu(output)
-        out_cpu = self.fc_cpu(out_cpu)
-        out_cpu = self.fc_cpu1(out_cpu)
-        out_cpu = self.fc_cpu2(out_cpu)
-
-        return out_cpu
+        output = self.transformer_encoder(input)  # Shape: (seq_len, batch_size, d_model)
+        output = output.view(batch_size, -1)  # Shape: (batch_size, seq_len * d_model)
+        output = self.decoder(output)  # Shape: (batch_size, output_dim)
+        return output
 
 
 def mse(prediction, real_value):
@@ -107,7 +94,10 @@ def my_loss_fn(output, target):
 
 
 def my_r2_fn(output, target):
-    r2 = sm.r2_score(target, output)
+    output_has_nan = torch.isnan(output.cpu()).any().item()
+    if output_has_nan:
+        return - math.inf
+    r2 = sm.r2_score(target.cpu(), output.cpu())
     if math.isnan(r2):
         return - math.inf
     return r2
@@ -242,9 +232,10 @@ def plot_results(t, predictions_cpu, actual_values_cpu, sequence_length, target,
         plt.xticks(rotation=45)  # 'vertical')
         plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
         axs.set_ylabel(target[0], fontsize=18)
-        axs.set_title('LSTM ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(i + 1), fontsize=20)
+        axs.set_title('Transformer ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(i + 1),
+                      fontsize=20)
         axs.legend(fontsize=16)
-        plt.savefig('LSTM_' + 'h' + str(sequence_length) + '_t' + str(i + 1) + '' + '.png')
+        plt.savefig('Transformer_' + 'h' + str(sequence_length) + '_t' + str(i + 1) + '' + '.png')
 
 
 def get_prediction_results(t, target, test_dataset, best_trained_model, device, config):
@@ -272,7 +263,8 @@ def get_min_max_values_of_training_data(df):
 
 def get_training_data(t, target, features, df_train=None, config=None):
     # normalize data: this improves model accuracy as it gives equal weights/importance to each variable
-
+    # first use the filter, then normalize the data
+    # df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
     df_train = normalize_data_minMax(features, df_train)
     train_sequence = SequenceDataset(
         df_train,
@@ -297,8 +289,9 @@ def get_test_data(t, target, features, df_test=None, config=None):
 
 def train_and_test_model(config, checkpoint_dir="checkpoint", training_data_file=None, t=None, epochs=None,
                          features=None, target=None):
-    model = RegressionLSTM(num_sensors=len(features), num_hidden_units=config["units"], num_layers=config["layers"],
-                           t=t, dropout=0.2, lin_layers=config['lin_layers'])
+    model = TimeSeriesTransformer(len(features), t, config["d_model"], config["nhead"],
+                                  config["dim_feedforward"], config["num_layers"], config["sequence_length"])
+
     # Wrap the model in nn.DataParallel to support data parallel training on multiple GPUs:
     device = "cpu"
     if torch.cuda.is_available():
@@ -333,7 +326,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     torch.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    file_path = 'lstm_univariate_bidirectional_all_at_once.txt'
+    file_path = 'transformer_univariate_tests.txt'
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", epochs=" + str(epochs))
     start_time = time.time()
     scheduler = ASHAScheduler(
@@ -346,13 +339,14 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         metric_columns=["loss", "r2", "training_iteration"])
     config = {
         "sequence_length": sequence_length,
-        "units": tune.grid_search([64, 128]),
-        "layers": tune.grid_search([2, 3]),
-        "lin_layers": tune.grid_search([200]),
-        "lr": tune.loguniform(0.0001, 0.0009),  # takes lower and upper bound
-        "batch_size": tune.grid_search([8, 16, 32]),
+        "d_model": tune.grid_search([16, 32]),
+        "nhead": tune.grid_search([1]),
+        "dim_feedforward": tune.grid_search([16, 32]),
+        "num_layers": tune.grid_search([1]),
+        "lr": tune.loguniform(0.00001, 0.0009),  # takes lower and upper bound
+        "batch_size": tune.grid_search([4, 8, 16]),
     }
-    df = pd.read_csv("../../sortedGroupedJobFiles/3418324.csv", sep=",")
+    df = pd.read_csv("../sortedGroupedJobFiles/3418324.csv", sep=",")
     # split into training and test set - check until what index the training data is
     test_head = int(len(df) * 0.7)
     df_train = df.iloc[:test_head, :]
@@ -378,14 +372,17 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
     print("Best trial final validation r2: {}".format(best_trial.last_result["r2"]))
     append_to_file(file_path,
-                   "u=" + str(best_trial.config["units"]) + ", l=" + str(best_trial.config["layers"]) + ", lr=" + str(
+                   "dm=" + str(best_trial.config["d_model"]) + ", nh=" + str(
+                       best_trial.config["nhead"]) + ", lr=" + str(
                        round(best_trial.config["lr"], 5)) + ", bs=" +
-                   str(best_trial.config["batch_size"]) + ", ll=" +
-                   str(best_trial.config["lin_layers"]))
+                   str(best_trial.config["batch_size"]) + ", df=" +
+                   str(best_trial.config["dim_feedforward"]) + ", nl=" +
+                   str(best_trial.config["num_layers"]))
 
-    best_trained_model = RegressionLSTM(num_sensors=len(features), num_hidden_units=best_trial.config["units"],
-                                        num_layers=best_trial.config["layers"], t=t, dropout=0,
-                                        lin_layers=best_trial.config["lin_layers"])
+    best_trained_model = TimeSeriesTransformer(len(features), t, best_trial.config["d_model"],
+                                               best_trial.config["nhead"], best_trial.config["dim_feedforward"],
+                                               best_trial.config["num_layers"], sequence_length)
+
     device = "cpu"
     best_trained_model.to(device)
 
@@ -415,5 +412,6 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
 if __name__ == "__main__":
     for history in (1, 6, 12):
-        main(t=6, sequence_length=history, epochs=100, features=['mean_CPU_usage'],
+        main(t=6, sequence_length=history, epochs=150, features=['mean_CPU_usage'],
              target=['mean_CPU_usage'], num_samples=2)
+

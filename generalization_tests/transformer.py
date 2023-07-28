@@ -89,7 +89,10 @@ def my_loss_fn(output, target):
 
 
 def my_r2_fn(output, target):
-    r2 = sm.r2_score(target.cpu(), output.cpu())
+    output_has_nan = torch.isnan(output).any().item()
+    if output_has_nan:
+        return - math.inf
+    r2 = sm.r2_score(target, output)
     if math.isnan(r2):
         return - math.inf
     return r2
@@ -143,7 +146,7 @@ def train_model(data_loader, model, optimizer, device, t):
 
 
 def predict(data_loader, model, device):
-    cpu = torch.empty(0, device=device)  # Initialize an empty tensor on the desired device
+    cpu = torch.tensor([])
     model.eval()
     with torch.no_grad():
         for i, (X, y) in enumerate(data_loader):
@@ -197,6 +200,7 @@ def get_prediction_results(t, target, test_data, best_trained_model, device, con
     pred_denorm_cpus = list()
     act_denorm_cpus = list()
     for data in test_data:
+        print("H")
         test_eval_loader = DataLoader(data, batch_size=1, shuffle=False, num_workers=1)
         prediction_test_cpu = predict(test_eval_loader, best_trained_model, device)
         denorm_cpu = denormalize_data_minMax(target[0], prediction_test_cpu)
@@ -224,7 +228,7 @@ def get_min_max_values_of_training_data(df):
 def get_training_data(t, target, features, df_train=None, config=None):
     # normalize data: this improves model accuracy as it gives equal weights/importance to each variable
     # first use the filter, then normalize the data
-    df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
+    # df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
     df_train = normalize_data_minMax(features, df_train)
     train_sequence = SequenceDataset(
         df_train,
@@ -249,7 +253,7 @@ def get_test_data(t, target, features, df_test=None, config=None):
 
 def train_and_test_model(config, checkpoint_dir="checkpoint", training_files=None, validation_files=None, t=None,
                          epochs=None,
-                         features=None, target=None, device=None):
+                         features=None, target=None):
     training_files = read_files(training_files, True)
     validation_files = read_files(validation_files, False)
     training_loaders = list()
@@ -266,7 +270,9 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_files=Non
     model = TimeSeriesTransformer(len(features), t, config["d_model"], config["nhead"],
                                   config["dim_feedforward"], config["num_layers"], config["sequence_length"])
     # Wrap the model in nn.DataParallel to support data parallel training on multiple GPUs:
+    device = "cpu"
     if torch.cuda.is_available():
+        device = "cuda:0"
         if torch.cuda.device_count() > 1:
             model = nn.DataParallel(model)
     model.to(device)
@@ -336,7 +342,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
     config = {
         "sequence_length": sequence_length,
-        "d_model": tune.grid_search([8, 16]),
+        "d_model": tune.grid_search([16, 32]),
         "nhead": tune.grid_search([1]),
         "dim_feedforward": tune.grid_search([64]),
         "num_layers": tune.grid_search([1]),
@@ -349,14 +355,11 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     validation_files_csv = read_files(validation_files, False)
     test_files = read_file_names(file_path, "1", 0, 50)
     test_files_csv = read_files(test_files, False)
-    device = "cpu"
-    if torch.cuda.is_available():
-        device = "cuda:0"
     result = tune.run(
         partial(train_and_test_model, training_files=training_files, validation_files=validation_files, t=t,
                 epochs=epochs, features=features,
-                target=target, device=device),
-        resources_per_trial={"cpu": 4, "gpu": 0.25},
+                target=target),
+        resources_per_trial={"cpu": 4},
         # By default, Tune automatically runs N concurrent trials, where N is the number of CPUs (cores) on your machine.
         config=config,
         num_samples=num_samples,  # how often I sample from hyperparameters
@@ -384,6 +387,8 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     best_trained_model = TimeSeriesTransformer(len(features), t, best_trial.config["d_model"],
                                                best_trial.config["nhead"], best_trial.config["dim_feedforward"],
                                                best_trial.config["num_layers"], sequence_length)
+
+    device = "cpu"
     best_trained_model.to(device)
 
     best_checkpoint_dir = best_trial.checkpoint.dir_or_data

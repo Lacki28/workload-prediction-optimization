@@ -1,0 +1,9 @@
+{
+  "batch_size": 8,
+  "d_model": 16,
+  "dim_feedforward": 16,
+  "lr": 0.0002024823719822711,
+  "nhead": 1,
+  "num_layers": 1,
+  "sequence_length": 12
+}
