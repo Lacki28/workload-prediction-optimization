@@ -145,4 +145,4 @@ def main(t, target, sequence_length):
 
 
 if __name__ == "__main__":
-    main(t=6, target=['mean_CPU_usage'], sequence_length=12)
+    main(t=6, target=['mean_CPU_usage'], sequence_length=4)
