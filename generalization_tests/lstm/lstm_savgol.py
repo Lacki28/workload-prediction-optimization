@@ -11,6 +11,7 @@ import torch.nn as nn
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
+from scipy.signal import savgol_filter
 from torch.utils.data import Dataset, DataLoader
 
 min_max_dict = {}
@@ -62,7 +63,6 @@ class RegressionLSTM(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        # BiLSTM
         output, (hn, cn) = self.lstm(x)  # (input, hidden, and internal state)
         output = output[:, -1, :]
 
@@ -102,7 +102,7 @@ def my_loss_fn(output, target):
 
 
 def my_r2_fn(output, target):
-    r2 = sm.r2_score(target, output)
+    r2 = sm.r2_score(target.cpu(), output.cpu())
     if math.isnan(r2):
         return - math.inf
     return r2
@@ -157,7 +157,7 @@ def train_model(data_loader, model, optimizer, device, t):
 
 
 def predict(data_loader, model, device):
-    cpu = torch.tensor([])
+    cpu = torch.empty(0, device=device)  # Initialize an empty tensor on the desired device
     model.eval()
     with torch.no_grad():
         for i, (X, y) in enumerate(data_loader):
@@ -239,7 +239,7 @@ def get_min_max_values_of_training_data(df):
 def get_training_data(t, target, features, df_train=None, config=None):
     # normalize data: this improves model accuracy as it gives equal weights/importance to each variable
     # first use the filter, then normalize the data
-    # df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
+    df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
     df_train = normalize_data_minMax(features, df_train)
     train_sequence = SequenceDataset(
         df_train,
@@ -263,7 +263,8 @@ def get_test_data(t, target, features, df_test=None, config=None):
 
 
 def train_and_test_model(config, checkpoint_dir="checkpoint", training_files=None, validation_files=None, t=None,
-                         epochs=None, features=None, target=None):
+                         epochs=None,
+                         features=None, target=None, device=None):
     training_files = read_files(training_files, True)
     validation_files = read_files(validation_files, False)
     training_loaders = list()
@@ -280,9 +281,7 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_files=Non
     model = RegressionLSTM(num_sensors=len(features), num_hidden_units=config["units"], num_layers=config["layers"],
                            t=t, dropout=0.2, lin_layers=config['lin_layers'])
     # Wrap the model in nn.DataParallel to support data parallel training on multiple GPUs:
-    device = "cpu"
     if torch.cuda.is_available():
-        device = "cuda:0"
         if torch.cuda.device_count() > 1:
             model = nn.DataParallel(model)
     model.to(device)
@@ -334,7 +333,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     torch.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    file_path = 'lstm_univariate_trained_new_data.txt'
+    file_path = 'lstm_univariate_trained_new_data_filtered.txt'
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", epochs=" + str(epochs))
     start_time = time.time()
     scheduler = ASHAScheduler(
@@ -345,13 +344,19 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         reduction_factor=2)  # if it is set to 2, then half of the configurations survive each round.
     reporter = CLIReporter(
         metric_columns=["loss", "r2", "training_iteration"])
+
+    # Best
+    # trial
+    # config: {'sequence_length': 1, 'units': 256, 'layers': 5, 'lin_layers': 300, 'lr': 1.1596220952659403e-05,
+    #          'batch_size': 16}
+
     config = {  #
         "sequence_length": sequence_length,
         "units": tune.grid_search([128, 256]),
         "layers": tune.grid_search([4, 5]),
-        "lin_layers": tune.grid_search([200, 300]),
-        "lr": tune.loguniform(0.00001, 0.00008),  # takes lower and upper bound
-        "batch_size": tune.grid_search([16, 32]),
+        "lin_layers": tune.grid_search([300]),
+        "lr": tune.loguniform(0.000008, 0.00008),  # takes lower and upper bound
+        "batch_size": tune.grid_search([16]),
     }
     training_files = read_file_names(file_path, "0", 0, 50)
     training_files_csv = read_files(training_files, True)
@@ -359,11 +364,14 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     validation_files_csv = read_files(validation_files, False)
     test_files = read_file_names(file_path, "1", 0, 50)
     test_files_csv = read_files(test_files, False)
+    device = "cpu"
+    if torch.cuda.is_available():
+        device = "cuda:0"
     result = tune.run(
         partial(train_and_test_model, training_files=training_files, validation_files=validation_files, t=t,
                 epochs=epochs, features=features,
-                target=target),
-        resources_per_trial={"cpu": 4},
+                target=target, device=device),
+        resources_per_trial={"cpu": 4, "gpu": 0.25},
         # By default, Tune automatically runs N concurrent trials, where N is the number of CPUs (cores) on your machine.
         config=config,
         num_samples=num_samples,  # how often I sample from hyperparameters
@@ -374,8 +382,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         print(trial.metric_analysis)
     # retrieve the best trial from a Ray Tune experiment using the get_best_trial() method of the tune.ExperimentAnalysis object.
     # three arguments: the name of the metric to optimize, the direction of optimization ("min" for minimizing the metric or "max" for maximizing it), and the mode for selecting the best trial ("last" for selecting the last trial that achieved the best metric value, or "all" for selecting all trials that achieved the best metric value).
-
-    best_trial = result.get_best_trial("loss", "min", "last")
+    best_trial = result.get_best_trial("r2", "max", "last")
     training_time = round((time.time() - start_time), 2)
     print("Best trial config: {}".format(best_trial.config))
     print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
@@ -389,7 +396,6 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     best_trained_model = RegressionLSTM(num_sensors=len(features), num_hidden_units=best_trial.config["units"],
                                         num_layers=best_trial.config["layers"], t=t, dropout=0,
                                         lin_layers=best_trial.config["lin_layers"])
-    device = "cpu"
     best_trained_model.to(device)
 
     best_checkpoint_dir = best_trial.checkpoint.dir_or_data
@@ -426,10 +432,10 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
                                                                      device, best_trial.config)
 
     print("calculate results")
-    calculate_prediction_results(t, pred_cpu_train, act_cpu_train, start_time, training_time, "new_data_train")
-    calculate_prediction_results(t, pred_cpu_test, act_cpu_test, start_time, training_time, "new_data_test")
+    calculate_prediction_results(t, pred_cpu_train, act_cpu_train, start_time, training_time, "new_data_filtered_train")
+    calculate_prediction_results(t, pred_cpu_test, act_cpu_test, start_time, training_time, "new_data_filtered_test")
     calculate_prediction_results(t, pred_cpu_validation, act_cpu_validation, start_time, training_time,
-                                 "new_data_validation")
+                                 "new_data_filtered_validation")
 
 
 if __name__ == "__main__":

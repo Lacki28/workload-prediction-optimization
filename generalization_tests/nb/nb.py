@@ -105,7 +105,7 @@ def normalize_data_minMax(features, df):
     return df
 
 
-def calculate_prediction_results(t, pred_cpu, act_cpu, start_time,file_path):
+def calculate_prediction_results(t, pred_cpu, act_cpu, start_time, file_path):
     for job_index in range(len(act_cpu)):
         append_to_file(file_path, str(t) + " timestamp ahead prediction")
 
@@ -114,35 +114,8 @@ def calculate_prediction_results(t, pred_cpu, act_cpu, start_time,file_path):
 
         calc_MSE_Accuracy(t, current_act_cpu_train, current_pred_cpu_train, file_path, start_time)
 
-def plot_results(t, predictions_cpu, actual_values_cpu, sequence_length, target,
-                 df):
-    indices = pd.DatetimeIndex(df["start_time"])
-    indices = indices.tz_localize(timezone.utc).tz_convert('US/Eastern')
-    first_timestamp = indices[0].replace(year=2011, month=5, day=1, hour=19, minute=0)
-    increment = timedelta(minutes=5)
-    indices = [timestamp.strftime("%Y-%m-%d %H:%M") for timestamp in
-               [first_timestamp + i * increment for i in range(len(indices))]]
-    indices = indices[int(len(df) * 0.7) + t - 1:]
-    indices = [str(period) for period in indices]
-    for i in range(t):
-        current_predictions_cpu = predictions_cpu[:, i]
-        current_actual_values_cpu = actual_values_cpu[:, i]
-        fig, axs = plt.subplots(nrows=1, ncols=1, figsize=(12, 10))
-        plt.subplots_adjust(bottom=0.2)  # Adjust the value as needed
-        axs.plot(indices, current_actual_values_cpu, label='actual ' + target[0], linewidth=1,
-                 color='orange')
-        axs.plot(indices, current_predictions_cpu, label='predicted ' + target[0], linewidth=1,
-                 color='blue', linestyle='dashed')
-        axs.set_xlabel('Time')
-        plt.xticks(rotation=45)  # 'vertical')
-        plt.gca().xaxis.set_major_locator(ticker.IndexLocator(base=12 * 24, offset=0))  # print every hour
-        axs.set_ylabel(target[0])
-        axs.set_title('LSTM ' + target[0] + ' prediction h=' + str(sequence_length) + ', t=' + str(i + 1))
-        axs.legend()
-        plt.savefig('LSTM_bi_directional_' + 'h' + str(sequence_length) + '_t' + str(i + 1) + '' + '.png')
 
-
-def get_prediction_results(sequence_length, t, test_datasets,target):
+def get_prediction_results(sequence_length, t, test_datasets, target):
     prediction_test_cpus = list()
     actual_test_cpus = list()
     for test_dataset in test_datasets:
@@ -176,7 +149,7 @@ def read_files(training_files):
     return training_files_csv
 
 
-def main(t,sequence_length, target, features):
+def main(t, sequence_length, target, features):
     file_path = 'nb.txt'
     start_time = time.time()
     training_files = read_file_names(file_path, "0", 0, 50)
@@ -188,7 +161,7 @@ def main(t,sequence_length, target, features):
 
     pred_cpu_train, act_cpu_train = get_prediction_results(sequence_length, t, training_files_csv, target)
     pred_cpu_validation, act_cpu_validation = get_prediction_results(sequence_length, t, validation_files_csv, target)
-    pred_cpu_test, act_cpu_test = get_prediction_results(sequence_length, t, test_files_csv,target)
+    pred_cpu_test, act_cpu_test = get_prediction_results(sequence_length, t, test_files_csv, target)
 
     calculate_prediction_results(t, pred_cpu_train, act_cpu_train, start_time, "train.txt")
     calculate_prediction_results(t, pred_cpu_test, act_cpu_test, start_time, "test.txt")

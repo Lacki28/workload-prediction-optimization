@@ -63,7 +63,6 @@ class RegressionLSTM(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        # BiLSTM
         output, (hn, cn) = self.lstm(x)  # (input, hidden, and internal state)
         output = output[:, -1, :]
 
@@ -240,7 +239,7 @@ def get_min_max_values_of_training_data(df):
 def get_training_data(t, target, features, df_train=None, config=None):
     # normalize data: this improves model accuracy as it gives equal weights/importance to each variable
     # first use the filter, then normalize the data
-    df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
+    # df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
     df_train = normalize_data_minMax(features, df_train)
     train_sequence = SequenceDataset(
         df_train,
@@ -334,7 +333,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     torch.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    file_path = 'lstm_univariate_trained_new_data_filtered.txt'
+    file_path = 'lstm_univariate_trained_new_data.txt'
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", epochs=" + str(epochs))
     start_time = time.time()
     scheduler = ASHAScheduler(
@@ -345,12 +344,18 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         reduction_factor=2)  # if it is set to 2, then half of the configurations survive each round.
     reporter = CLIReporter(
         metric_columns=["loss", "r2", "training_iteration"])
+
+    # Best
+    # trial
+    # config: {'sequence_length': 1, 'units': 256, 'layers': 5, 'lin_layers': 300, 'lr': 1.1596220952659403e-05,
+    #          'batch_size': 16}
+
     config = {  #
         "sequence_length": sequence_length,
-        "units": tune.grid_search([128, 256]),
-        "layers": tune.grid_search([4, 5]),
-        "lin_layers": tune.grid_search([200, 300]),
-        "lr": tune.loguniform(0.00001, 0.00008),  # takes lower and upper bound
+        "units": tune.grid_search([256, 512]),
+        "layers": tune.grid_search([5, 6]),
+        "lin_layers": tune.grid_search([300]),
+        "lr": tune.loguniform(0.000008, 0.00008),  # takes lower and upper bound
         "batch_size": tune.grid_search([16, 32]),
     }
     training_files = read_file_names(file_path, "0", 0, 50)
@@ -427,12 +432,12 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
                                                                      device, best_trial.config)
 
     print("calculate results")
-    calculate_prediction_results(t, pred_cpu_train, act_cpu_train, start_time, training_time, "new_data_filtered_train")
-    calculate_prediction_results(t, pred_cpu_test, act_cpu_test, start_time, training_time, "new_data_filtered_test")
+    calculate_prediction_results(t, pred_cpu_train, act_cpu_train, start_time, training_time, "new_data_train")
+    calculate_prediction_results(t, pred_cpu_test, act_cpu_test, start_time, training_time, "new_data_test")
     calculate_prediction_results(t, pred_cpu_validation, act_cpu_validation, start_time, training_time,
-                                 "new_data_filtered_validation")
+                                 "new_data_validation")
 
 
 if __name__ == "__main__":
-    main(t=6, sequence_length=1, epochs=200, features=['mean_CPU_usage'],
+    main(t=6, sequence_length=1, epochs=100, features=['mean_CPU_usage'],
          target=['mean_CPU_usage'], num_samples=2)

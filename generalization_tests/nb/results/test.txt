@@ -1,0 +1,900 @@
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01604 & 0.0005528583810507784 & 0.92532 & inf & 0.94
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00016 & 1.0373626403222717e-07 & 0.87804 & inf & 0.94
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00089 & 2.149011721252694e-06 & 0.93998 & inf & 0.94
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00032 & 1.0562207971344776e-06 & 0.90685 & inf & 0.94
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00029 & 1.17294707546706e-07 & -0.82732 & inf & 0.94
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00256 & 6.448528913097966e-05 & 0.77851 & inf & 0.94
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.26629 & 0.16776917193104796 & 0.60388 & inf & 0.94
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.03911 & 0.037302302670631775 & 0.87973 & inf & 0.94
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+8e-05 & 2.0715916354872151e-07 & 0.03241 & inf & 0.94
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00025 & 8.752556443033426e-08 & -1.87109 & inf & 0.94
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00305 & 6.90113257959305e-05 & 0.25714 & inf & 0.94
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00011 & 4.144405030397605e-08 & 0.96471 & inf & 0.94
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00018 & 4.6475271292842743e-08 & -1.58126 & inf & 0.94
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00043 & 1.1561272995972796e-06 & 0.80251 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0001 & 2.4584565994954577e-07 & 0.46064 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00109 & 5.877090843038581e-06 & -0.85244 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+4e-05 & 7.54249936160008e-09 & -0.14383 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+9e-05 & 2.357139991320706e-07 & 0.65132 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.2373 & 0.12604542193373847 & 0.9693 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00341 & 3.4637415654569405e-05 & 0.1887 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00134 & 1.5677459799806952e-05 & 0.1282 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00026 & 2.390399570815862e-07 & -0.00613 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0 & 3.3994244998202944e-12 & 0.34066 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.03436 & 0.40804733197014503 & -0.55889 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00025 & 4.7085423109141005e-07 & -0.79064 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00051 & 9.465191391616774e-07 & 0.92092 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01381 & 0.0008166152268359888 & 0.09836 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+8e-05 & 1.4131233800922488e-08 & -0.66162 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+3e-05 & 2.076135461976048e-07 & -0.4672 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00017 & 7.007227912423625e-08 & -1.29269 & inf & 0.95
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00146 & 5.419038136303749e-06 & 0.06252 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02638 & 0.0023148263721228714 & 0.68427 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.22716 & 0.23185832835830406 & 0.95075 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0 & 2.466354411996843e-12 & 0.49459 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+2e-05 & 7.177887084520475e-08 & -0.66685 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00237 & 6.753123643005628e-05 & -0.53855 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0 & 3.843459423312378e-09 & -0.97087 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0002 & 5.6229234370432484e-08 & -1.71357 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00779 & 0.02286603777547407 & -0.12939 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00036 & 4.422826875248041e-07 & 0.57656 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01342 & 0.0005411548364877269 & 0.9107 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00042 & 1.0476355730267093e-05 & 0.38392 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00022 & 2.01340500718735e-07 & 0.20918 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02118 & 0.0010438945034217904 & -0.83412 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0012 & 0.002632351416685001 & -0.99894 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01538 & 0.00037303287050771423 & -0.33057 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00029 & 1.703194541480949e-07 & -1.17096 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00774 & 0.00043487248006807285 & -0.30568 & inf & 0.96
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.09983 & 0.02124451445637511 & 0.97122 & inf & 0.97
+1 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01659 & 0.0008709113630251495 & -0.44667 & inf & 0.97
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01862 & 0.0008388706895932445 & 0.88669 & inf & 0.93
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00026 & 2.778173054757729e-07 & 0.6734 & inf & 0.93
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00096 & 2.552532976319321e-06 & 0.92869 & inf & 0.93
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00038 & 1.1760033800949694e-06 & 0.8963 & inf & 0.93
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00017 & 6.939981614703713e-08 & -0.08303 & inf & 0.93
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00321 & 7.950098029039646e-05 & 0.72697 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.29331 & 0.1846884563020994 & 0.56306 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.05599 & 0.06471863098411086 & 0.79135 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0001 & 1.7554662886124074e-07 & 0.10085 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00022 & 7.783856397915169e-08 & -1.5532 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00363 & 7.256172632303432e-05 & 0.21906 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00014 & 7.55133962280036e-08 & 0.93571 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00016 & 4.1209018854442336e-08 & -1.28874 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00056 & 1.5709015771113285e-06 & 0.73159 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00014 & 3.6926892921407837e-07 & 0.186 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00107 & 6.477525536488914e-06 & -1.04172 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+4e-05 & 8.776976340440816e-09 & -0.33095 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00011 & 2.889964062890631e-07 & 0.57149 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.28591 & 0.20281794538735237 & 0.95061 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00379 & 4.0098096753713454e-05 & 0.06082 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00157 & 1.798802635492259e-05 & -0.00407 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00025 & 3.300132551329978e-07 & -0.38887 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0 & 4.282027234603403e-12 & 0.16951 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.04598 & 0.4112722713388069 & -0.57103 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00023 & 4.6588746194224766e-07 & -0.77159 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00074 & 2.1356064347826095e-06 & 0.82158 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01565 & 0.0009404808001317996 & -0.03833 & inf & 0.94
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+8e-05 & 1.534085010450515e-08 & -0.80368 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+4e-05 & 2.841134614097497e-07 & -1.00758 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00015 & 6.667652319793912e-08 & -1.18133 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00167 & 6.5913975203641585e-06 & -0.14017 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0259 & 0.0020618176256110158 & 0.71851 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.33318 & 0.4785065615236062 & 0.89836 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0 & 3.23018760656773e-12 & 0.33812 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+2e-05 & 8.093777092478044e-08 & -0.89417 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00276 & 7.925927036898605e-05 & -0.80554 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+1e-05 & 3.844186077448456e-09 & -0.97086 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00018 & 5.049814920321112e-08 & -1.43694 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01126 & 0.02389681583920911 & -0.18017 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00043 & 5.836847282349822e-07 & 0.43933 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01785 & 0.0008097293519942193 & 0.86639 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00053 & 1.0530890381528507e-05 & 0.38079 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00022 & 2.0180076674254221e-07 & 0.20704 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02121 & 0.0010476718894171658 & -0.84433 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00134 & 0.002634941420757417 & -1.00073 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01968 & 0.0006227349307286324 & -1.23049 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00029 & 1.6725765641701613e-07 & -1.1326 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0084 & 0.000524363537455112 & -0.57431 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.12052 & 0.03044158011842172 & 0.95877 & inf & 0.95
+2 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01784 & 0.0009968514775134743 & -0.65568 & inf & 0.96
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0201 & 0.0010477855438229518 & 0.85848 & inf & 0.88
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00034 & 4.716774656887478e-07 & 0.44555 & inf & 0.88
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00103 & 2.9826784865692383e-06 & 0.91666 & inf & 0.88
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00042 & 1.2566519104735274e-06 & 0.88921 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00019 & 7.740029937284801e-08 & -0.20996 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00365 & 9.590368219622424e-05 & 0.67067 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.32366 & 0.20883098989269686 & 0.50581 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.07257 & 0.09480933066035742 & 0.69437 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00012 & 2.456722583511925e-07 & -0.26073 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+9e-05 & 2.6705001720790892e-08 & 0.12406 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00383 & 7.494255805195977e-05 & 0.19359 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00017 & 1.0671075965179715e-07 & 0.90915 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+6e-05 & 1.3859369857574996e-08 & 0.23022 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00064 & 1.7452874612411558e-06 & 0.70178 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00016 & 4.278101977895533e-07 & 0.05054 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00115 & 6.6717571172099706e-06 & -1.1027 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+5e-05 & 9.21378433688744e-09 & -0.39707 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00013 & 3.4797942322239967e-07 & 0.48254 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.28621 & 0.24418098527584758 & 0.94053 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00356 & 3.6606677261291484e-05 & 0.14266 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00172 & 1.9076676450628037e-05 & -0.06871 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00018 & 3.017909880431396e-07 & -0.26998 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0 & 4.7563957579388855e-12 & 0.07755 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.05452 & 0.41370564600637466 & -0.58015 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00012 & 4.2491478118873555e-07 & -0.61559 & inf & 0.89
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0009 & 3.4937546036176353e-06 & 0.70814 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01606 & 0.000986233572606351 & -0.08879 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+8e-05 & 1.4307114358981424e-08 & -0.68199 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+5e-05 & 2.8486716238021187e-07 & -1.01268 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+7e-05 & 4.5047946450569214e-08 & -0.47358 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0017 & 6.91118043608482e-06 & -0.19542 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.03173 & 0.002852726667111086 & 0.61057 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.40311 & 0.6788019030725194 & 0.85583 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0 & 3.5561848728880466e-12 & 0.27143 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+3e-05 & 8.132735650801061e-08 & -0.90307 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00282 & 8.153243813074668e-05 & -0.8571 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+1e-05 & 3.849492505594794e-09 & -0.97319 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00011 & 2.3899570098262434e-08 & -0.15335 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01423 & 0.024795834019141313 & -0.22444 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00047 & 6.840724387984642e-07 & 0.34091 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02078 & 0.0010608152973512496 & 0.82497 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0006 & 1.0606682253144835e-05 & 0.3764 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00018 & 1.822896716990175e-07 & 0.28349 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02119 & 0.0010239321141424285 & -0.8029 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00138 & 0.0026353632166673043 & -1.00081 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02313 & 0.0007678432074682974 & -1.75089 & inf & 0.9
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00026 & 1.5073345976629914e-07 & -0.92172 & inf & 0.91
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00906 & 0.0005085428956758571 & -0.52679 & inf & 0.91
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.14129 & 0.03917854772943542 & 0.94694 & inf & 0.91
+3 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01783 & 0.0010107136874389073 & -0.6785 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02139 & 0.0012179604362997486 & 0.8355 & inf & 0.89
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00042 & 6.675878381510067e-07 & 0.21534 & inf & 0.89
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00109 & 3.388496791974363e-06 & 0.9053 & inf & 0.89
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00044 & 1.270684336557696e-06 & 0.88798 & inf & 0.89
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00026 & 1.0542323855104551e-07 & -0.73076 & inf & 0.89
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00398 & 0.00010933302635517671 & 0.62459 & inf & 0.89
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.34104 & 0.21833616584554982 & 0.48307 & inf & 0.89
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.08688 & 0.12421579912548693 & 0.59962 & inf & 0.89
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00013 & 2.1828398676231636e-07 & -0.14405 & inf & 0.89
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00023 & 7.807266264980824e-08 & -1.56107 & inf & 0.89
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00436 & 7.945812240294298e-05 & 0.14516 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00019 & 1.3547603136137567e-07 & 0.88467 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00017 & 4.21397865599395e-08 & -1.34038 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00068 & 1.8831343206565918e-06 & 0.67821 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00017 & 4.6777888586498417e-07 & -0.04374 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00091 & 6.268187242478723e-06 & -0.97531 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+5e-05 & 9.586933439971156e-09 & -0.45369 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00015 & 4.0149849130680123e-07 & 0.40162 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.33568 & 0.321812862223868 & 0.92163 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00409 & 4.547054236760124e-05 & -0.06491 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00183 & 1.966393826869844e-05 & -0.10226 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00025 & 3.332553494930489e-07 & -0.40221 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0 & 5.1121399328859046e-12 & 0.0086 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.06237 & 0.41608598909835504 & -0.58907 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00023 & 4.621234590771811e-07 & -0.75688 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00106 & 4.915056740146164e-06 & 0.58944 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01713 & 0.001004244965627996 & -0.1086 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+7e-05 & 1.2624338148046501e-08 & -0.48404 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+5e-05 & 2.8366612140888976e-07 & -1.00397 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00015 & 6.656720356064237e-08 & -1.17767 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00174 & 7.024507332854062e-06 & -0.21488 & inf & 0.9
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.03013 & 0.002577211196705121 & 0.64818 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.46291 & 0.8497585632529921 & 0.81953 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0 & 3.9167486891977255e-12 & 0.19756 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+3e-05 & 8.156629828450763e-08 & -0.90844 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0028 & 8.083175014634615e-05 & -0.84093 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+1e-05 & 3.844150172943232e-09 & -0.97008 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00019 & 5.174900242449664e-08 & -1.49731 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01679 & 0.025649385465133148 & -0.26644 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00049 & 7.512463343038638e-07 & 0.27392 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02301 & 0.0012729873034432416 & 0.78999 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00065 & 1.077631438773065e-05 & 0.36651 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00023 & 2.1226284002396643e-07 & 0.16526 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01998 & 0.0009458168968146279 & -0.66519 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0014 & 0.0026356134159221064 & -1.00076 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02402 & 0.00081697656937981 & -1.92875 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0001 & 2.4489404681769148e-08 & 0.68781 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00907 & 0.000521614125798825 & -0.56585 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.14759 & 0.04327987591547633 & 0.94139 & inf & 0.91
+4 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01779 & 0.0010014990137917812 & -0.66302 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02241 & 0.0013117770670421755 & 0.82284 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0005 & 8.622735297383676e-07 & -0.01337 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00116 & 3.653550063305777e-06 & 0.89787 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00047 & 1.3828283955679736e-06 & 0.87811 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00013 & 5.2959458385826775e-08 & 0.13065 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00425 & 0.00011964596853108554 & 0.58922 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.36101 & 0.23464184468617483 & 0.44422 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.09904 & 0.14888661920994892 & 0.52015 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00014 & 2.50045383786307e-07 & -0.31307 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0002 & 6.801804385472852e-08 & -1.23112 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00461 & 8.296825264457809e-05 & 0.10756 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00022 & 1.6023450329669336e-07 & 0.86359 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00014 & 3.578815613464448e-08 & -0.98772 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00071 & 1.965230050315054e-06 & 0.66419 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00019 & 5.209147083392226e-07 & -0.16987 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00111 & 6.5098202113402045e-06 & -1.05133 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+5e-05 & 1.0298169737567314e-08 & -0.56168 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00016 & 4.559596687653783e-07 & 0.31912 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.35821 & 0.37434438283456645 & 0.90884 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00427 & 4.8123283475134804e-05 & -0.12705 & inf & 0.91
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00189 & 2.072803375360424e-05 & -0.16193 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00023 & 3.2365333166127293e-07 & -0.3618 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0 & 5.4952823564664975e-12 & -0.06637 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.06966 & 0.4188983490908953 & -0.59963 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00022 & 4.620675838679132e-07 & -0.75653 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00118 & 6.272157470884261e-06 & 0.47611 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01791 & 0.0010441351620280473 & -0.15256 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+8e-05 & 1.4790020230001199e-08 & -0.73848 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+5e-05 & 2.8147840393242306e-07 & -0.98829 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00013 & 6.262724750569339e-08 & -1.04861 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00173 & 7.012462037147992e-06 & -0.21265 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.03306 & 0.0031705102157469876 & 0.56726 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.53094 & 1.0135087863051877 & 0.78477 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0 & 4.261349786763544e-12 & 0.12661 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+3e-05 & 8.1774371928558e-08 & -0.91308 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00281 & 8.004782653336764e-05 & -0.82288 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+1e-05 & 3.852330927179866e-09 & -0.97389 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00017 & 4.5127329738703104e-08 & -1.17764 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01904 & 0.026390225580926498 & -0.30288 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00052 & 8.358754971542017e-07 & 0.18874 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02467 & 0.001424833550064604 & 0.76496 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0007 & 1.1531689689275012e-05 & 0.32218 & inf & 0.92
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00023 & 2.0969781879194627e-07 & 0.17494 & inf & 0.93
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01515 & 0.0007996704020040769 & -0.40775 & inf & 0.93
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00141 & 0.0026364364968091323 & -1.00115 & inf & 0.93
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02306 & 0.0007673790988664765 & -1.75222 & inf & 0.93
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00029 & 1.6765011996523616e-07 & -1.13701 & inf & 0.93
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00954 & 0.0005130049302551558 & -0.54001 & inf & 0.93
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.16058 & 0.04988876740161956 & 0.93244 & inf & 0.93
+5 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01813 & 0.001001125602120776 & -0.6622 & inf & 0.93
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02274 & 0.001342827610520551 & 0.81865 & inf & 0.9
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00058 & 1.0557595465999042e-06 & -0.24065 & inf & 0.9
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00123 & 4.031403705245057e-06 & 0.88729 & inf & 0.9
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00048 & 1.4629768692397972e-06 & 0.87106 & inf & 0.9
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00028 & 1.1406696384198868e-07 & -0.87372 & inf & 0.9
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00454 & 0.00013012398310659797 & 0.5533 & inf & 0.9
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.37061 & 0.24495499584595812 & 0.41929 & inf & 0.9
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.11187 & 0.17250630582500653 & 0.44408 & inf & 0.9
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00015 & 2.6084631288604535e-07 & -0.74787 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00012 & 3.8992394539678733e-08 & -0.279 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00466 & 8.37832105169985e-05 & 0.09894 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00024 & 1.8225913242739395e-07 & 0.84485 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+9e-05 & 2.0900257623250536e-08 & -0.16075 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00072 & 2.065447724490575e-06 & 0.64706 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0002 & 5.871333050208254e-07 & -0.32003 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00068 & 5.590194411461454e-06 & -0.76133 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+5e-05 & 1.070319514022042e-08 & -0.62316 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00018 & 5.440068097611469e-07 & 0.18618 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.3602 & 0.41281745596229336 & 0.89947 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00401 & 4.703957327420901e-05 & -0.1017 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00197 & 2.2480974055040895e-05 & -0.28528 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00017 & 2.99095889708703e-07 & -0.25832 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0 & 5.715355754015823e-12 & -0.1093 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.07615 & 0.42052763946819244 & -0.60569 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00014 & 4.36989572934548e-07 & -0.661 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00128 & 7.465219094068309e-06 & 0.3765 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01716 & 0.0010689424704387435 & -0.17982 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+9e-05 & 1.5634851831419324e-08 & -0.83757 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+5e-05 & 2.8168005558657996e-07 & -0.98948 & inf & 0.91
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+9e-05 & 5.032554935626948e-08 & -0.64626 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00172 & 7.037167509587727e-06 & -0.21679 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.03066 & 0.002753194659281657 & 0.62421 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.5945 & 1.1785073551394762 & 0.74974 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0 & 4.5471206477093205e-12 & 0.06817 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+3e-05 & 8.175222961236464e-08 & -0.91234 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0028 & 7.864450754086565e-05 & -0.79072 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+1e-05 & 3.8637721263798635e-09 & -0.97937 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0001 & 2.4567073174298732e-08 & -0.1855 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02117 & 0.027044512470519047 & -0.33503 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00054 & 9.214871707704522e-07 & 0.10197 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0261 & 0.0015917451335294144 & 0.73746 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00073 & 1.210770463398849e-05 & 0.28841 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0002 & 1.9709635622677695e-07 & 0.2244 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02109 & 0.0010377591944303185 & -0.8292 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00142 & 0.0026363745459770985 & -1.00086 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.02187 & 0.0007228371958861692 & -1.59255 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.00026 & 1.5303111865603643e-07 & -0.95152 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.0093 & 0.0005393667310742296 & -0.61909 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.16205 & 0.05126047218518357 & 0.93059 & inf & 0.92
+6 timestamp ahead prediction
+mae & mse & r2 & nr & total
+0.01748 & 0.0010085148262911922 & -0.67428 & inf & 0.92
