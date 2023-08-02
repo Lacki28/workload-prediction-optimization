@@ -1,0 +1,4 @@
+\multirow{2}{*}{ARIMA} & \multirow{2}{*}{validation} & {avg} & \multirow{2}{*}{individual} &\multirow{2}{*}{4}& 0.02133 & 0.01062 & 0.68345 & 1.00062 & \multirow{2}{*}{0.2998} & \multirow{2}{*}{196.1532}\\
+&   & std & & &0.06017 & 0.03714 & 0.3199 & 0.00038 &  & \\
+\multirow{2}{*}{ARIMA} & \multirow{2}{*}{test} & {avg} & \multirow{2}{*}{individual} &\multirow{2}{*}{4}& 0.02383 & 0.02235 & 0.09003 & 1.00128 & \multirow{2}{*}{0.2628} & \multirow{2}{*}{171.0698}\\
+&   & std & & &0.06599 & 0.07685 & 1.00008 & 0.00163 &  & \\
