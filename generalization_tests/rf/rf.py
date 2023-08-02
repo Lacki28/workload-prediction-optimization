@@ -141,6 +141,9 @@ def predict(test_files, t, sequence_length, features, target, start_time,
 
 
 def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_usage", trees=200, max_depth=3):
+    random_seed = 28
+    np.random.seed(random_seed)
+
     file_path = 'rf.txt'
     start_time = time.time()
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length))
@@ -152,7 +155,7 @@ def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_us
 
     training_files_csv_x, training_files_csv_y = read_files(training_files, t, sequence_length, features, target)
 
-    regressor = RandomForestRegressor(n_estimators=trees, max_depth=max_depth, random_state=0)
+    regressor = RandomForestRegressor(n_estimators=trees, max_depth=max_depth, random_state=random_seed)
 
     reshaped_training_files = [np.reshape(arr, (-1, 1)) for arr in training_files_csv_x]
     stacked_inputs = np.vstack(reshaped_training_files)
@@ -175,4 +178,4 @@ def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_us
 
 
 if __name__ == "__main__":
-    main(6, 1, ['mean_CPU_usage'], ['mean_CPU_usage'], 200, 4)
+    main(6, 1, ['mean_CPU_usage'], ['mean_CPU_usage'], 200, 6)
