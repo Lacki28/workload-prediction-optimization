@@ -2,3 +2,7 @@
 &   & std & & &0.09919 & 0.10646 & 0.46143 & 0.00038 &  & \\
 \multirow{2}{*}{ARIMA} & \multirow{2}{*}{test} & {avg} & \multirow{2}{*}{individual} &\multirow{2}{*}{4}& 0.03772 & 0.04881 & 0.03307 & 1.00132 & \multirow{2}{*}{0.2628} & \multirow{2}{*}{172.2494}\\
 &   & std & & &0.11325 & 0.1987 & 0.98303 & 0.00133 &  & \\
+\multirow{2}{*}{ARIMA} & \multirow{2}{*}{validation} & {avg} & \multirow{2}{*}{individual} &\multirow{2}{*}{4}& 0.03478 & 0.03011 & 0.52232 & 1.00063 & \multirow{2}{*}{0.2998} & \multirow{2}{*}{197.5712}\\
+&   & std & & &0.09919 & 0.10646 & 0.46143 & 0.00038 &  & \\
+\multirow{2}{*}{ARIMA} & \multirow{2}{*}{test} & {avg} & \multirow{2}{*}{individual} &\multirow{2}{*}{4}& 0.03772 & 0.04881 & 0.03307 & 1.00132 & \multirow{2}{*}{0.2628} & \multirow{2}{*}{172.2494}\\
+&   & std & & &0.11325 & 0.1987 & 0.98303 & 0.00133 &  & \\

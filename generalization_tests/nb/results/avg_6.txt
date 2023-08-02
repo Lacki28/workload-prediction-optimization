@@ -1,0 +1,4 @@
+\multirow{2}{*}{NB} & \multirow{2}{*}{validation} & {avg} & \multirow{2}{*}{-} &\multirow{2}{*}{4}& 0.03308 & 0.02548 & 0.43908 & \multirow{2}{*}{$\infty$} & \multirow{2}{*}{-} & \multirow{2}{*}{0.9368}\\
+&   & std & & &0.09573 & 0.09375 & 0.52801 &  &  & \\
+\multirow{2}{*}{NB} & \multirow{2}{*}{test} & {avg} & \multirow{2}{*}{-} &\multirow{2}{*}{4}& 0.03786 & 0.05041 & -0.13993 & \multirow{2}{*}{$\infty$} & \multirow{2}{*}{-} & \multirow{2}{*}{0.9126}\\
+&   & std & & &0.11045 & 0.18638 & 0.65142 &  &  & \\
