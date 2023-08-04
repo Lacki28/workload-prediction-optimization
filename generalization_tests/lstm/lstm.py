@@ -352,11 +352,11 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
     config = {  #
         "sequence_length": sequence_length,
-        "units": tune.grid_search([256, 512]),
-        "layers": tune.grid_search([5, 6]),
+        "units": tune.grid_search([128, 256]),
+        "layers": tune.grid_search([4, 5]),
         "lin_layers": tune.grid_search([300]),
         "lr": tune.loguniform(0.000008, 0.00008),  # takes lower and upper bound
-        "batch_size": tune.grid_search([16, 32]),
+        "batch_size": tune.grid_search([16]),
     }
     training_files = read_file_names(file_path, "0", 0, 50)
     training_files_csv = read_files(training_files, True)
@@ -382,7 +382,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         print(trial.metric_analysis)
     # retrieve the best trial from a Ray Tune experiment using the get_best_trial() method of the tune.ExperimentAnalysis object.
     # three arguments: the name of the metric to optimize, the direction of optimization ("min" for minimizing the metric or "max" for maximizing it), and the mode for selecting the best trial ("last" for selecting the last trial that achieved the best metric value, or "all" for selecting all trials that achieved the best metric value).
-    best_trial = result.get_best_trial("r2", "max", "last")
+    best_trial = result.get_best_trial("loss", "min", "last")
     training_time = round((time.time() - start_time), 2)
     print("Best trial config: {}".format(best_trial.config))
     print("Best trial final validation loss: {}".format(best_trial.last_result["loss"]))
@@ -439,5 +439,5 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
 
 if __name__ == "__main__":
-    main(t=6, sequence_length=1, epochs=100, features=['mean_CPU_usage'],
+    main(t=6, sequence_length=1, epochs=150, features=['mean_CPU_usage'],
          target=['mean_CPU_usage'], num_samples=2)

@@ -439,5 +439,5 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
 
 if __name__ == "__main__":
-    main(t=6, sequence_length=1, epochs=100, features=['mean_CPU_usage'],
+    main(t=6, sequence_length=1, epochs=150, features=['mean_CPU_usage'],
          target=['mean_CPU_usage'], num_samples=2)
