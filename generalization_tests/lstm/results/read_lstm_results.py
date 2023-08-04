@@ -79,7 +79,7 @@ def get_avg_loss(dir):
                 "\multirow{2}{*}{" + calc_avg(training_time) + "}" + " & " "\multirow{2}{*}{" + calc_avg(
                     total_time) + "}\\\\\n")
             file.write(
-                "&   & std & & &" + calc_std(mae) + " & " + calc_std(mse) + " & " + "{:e}".format(float(calc_avg(r2))) + " & " + calc_std(
+                "&   & std & & &" + calc_std(mae) + " & " + calc_std(mse) + " & " + "{:e}".format(float(calc_std(r2))) + " & " + calc_std(
                     nr) + " &  & \\\\\n")
         list_of_mae.append(mae)
         list_of_mse.append(mse)

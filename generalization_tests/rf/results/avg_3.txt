@@ -1,0 +1,4 @@
+\multirow{2}{*}{RF} & \multirow{2}{*}{test} & {avg} & \multirow{2}{*}{individual} &\multirow{2}{*}{1}& 0.03483 & 0.03281 & -5.530657e+04 & 1.00143 & \multirow{2}{*}{42.79} & \multirow{2}{*}{52.2388}\\
+&   & std & & &0.09318 & 0.11135 & 2.734110e+05 & 0.00617 &  & \\
+\multirow{2}{*}{RF} & \multirow{2}{*}{validation} & {avg} & \multirow{2}{*}{individual} &\multirow{2}{*}{1}& 0.03063 & 0.0178 & -6.526260e+02 & 1.00187 & \multirow{2}{*}{42.79} & \multirow{2}{*}{47.6624}\\
+&   & std & & &0.08026 & 0.06602 & 4.551113e+03 & 0.01084 &  & \\

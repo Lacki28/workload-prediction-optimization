@@ -71,7 +71,7 @@ def get_avg_loss(dir):
                 total_time.append(float(test_error_values[4]))
         with open('avg_' + str(timestamp + 1) + ".txt", 'a+') as file:
             file.write(
-                "\multirow{2}{*}{NB} & \multirow{2}{*}{" + dir + "} & {avg} & \multirow{2}{*}{-} &\multirow{2}{*}{4}& " +
+                "\multirow{2}{*}{NB} & \multirow{2}{*}{" + dir + "} & {avg} & \multirow{2}{*}{-} &\multirow{2}{*}{1}& " +
                 calc_avg(mae) + " & " + calc_avg(mse) + " & " + calc_avg(r2) + " & \multirow{2}{*}{$\infty$} & " +
                 "\multirow{2}{*}{-}" + " & " "\multirow{2}{*}{" + calc_avg(
                     total_time) + "}\\\\\n")
