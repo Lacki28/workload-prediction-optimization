@@ -4,16 +4,41 @@ from matplotlib import pyplot as plt
 x = ['1', '2', '3', '4', '5', '6']
 num_columns = 2
 bar_width = 0.15
-column_names = ["Trained without filter", "Trained with savgol filter"]
-colors = ['C0', 'C1']
+column_names = ["Best result with max r2", "Best result with min loss"]
+colors = ['C4', 'C0']
 
 # MSE - 50
-values_x1 = [0.04421, 0.01706]
-values_x2 = [0.09694, 0.02156]
-values_x3 = [0.1127, 0.02572]
-values_x4 = [0.14887, 0.03035]
-values_x5 = [0.15362, 0.03599]
-values_x6 = [0.18186, 0.04291]
+values_x1 = [0.04421, 0.03334]
+values_x2 = [0.09694, 0.0487]
+values_x3 = [0.1127, 0.04636]
+values_x4 = [0.14887, 0.05973]
+values_x5 = [0.15362, 0.07882]
+values_x6 = [0.18186, 0.11091]
+
+values = [values_x1, values_x2, values_x3, values_x4, values_x5, values_x6]
+x_indexes = np.arange(len(x))
+base_color = plt.rcParams['axes.prop_cycle'].by_key()['color'][0]
+for i in range(num_columns):
+    plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
+            label=f'{column_names[i]}', alpha=0.5, color=f'{colors[i]}')
+
+plt.xlabel('Number of time stamps ahead', fontsize=12)
+plt.ylabel('MSE', fontsize=12)
+plt.title('MSE of the prediction of job 3418324, with 50 epochs training, without filter.', fontsize=11)
+plt.xticks(x_indexes, x)
+plt.legend(fontsize=9.7)
+plt.savefig('50ep_minmax_univar.png')
+plt.close()
+
+colors = ['C0', 'C1']
+column_names = ["Trained without filter", "Trained with savgol filter"]
+# MSE - 50
+values_x1 = [0.03334, 0.01706]
+values_x2 = [0.0487, 0.02156]
+values_x3 = [0.04636, 0.02572]
+values_x4 = [0.05973, 0.03035]
+values_x5 = [0.07882, 0.03599]
+values_x6 = [0.11091, 0.04291]
 
 values = [values_x1, values_x2, values_x3, values_x4, values_x5, values_x6]
 x_indexes = np.arange(len(x))

@@ -4,8 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-def remove_outliers(data):
-    cleaned_data = []
+def calculate_outliers(data):
     for inner_list in data:
         data_arr = np.array(inner_list, dtype=np.float64)
 
@@ -14,21 +13,18 @@ def remove_outliers(data):
 
         IQR = Q3 - Q1
 
-        lower_bound = Q1 - 2 * IQR
-        upper_bound = Q3 + 2 * IQR
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
         print(len(data_arr))
         print(len([x for x in data_arr if lower_bound <= x <= upper_bound]))
-        cleaned_data.append([x for x in data_arr if lower_bound <= x <= upper_bound])
-
-    return cleaned_data
 
 
 def create_boxplot(loss, name, timestamp, dir):
-    print(dir +" "+ name)
-    loss = remove_outliers(loss)
+    print(dir + " " + name)
+    calculate_outliers(loss)
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 8))
 
-    plt.boxplot(loss)
+    plt.boxplot(loss, showfliers=False)
     plt.xlabel('Timestamps ahead', fontsize=20)
     plt.ylabel('Metric ' + name, fontsize=20)
     plt.title('LSTM ' + name, fontsize=22)
@@ -63,7 +59,7 @@ def get_avg_loss(dir):
         training_time = []
         total_time = []
 
-        with open('new_data_filtered_'+dir + str(timestamp + 1) + ".txt", 'r') as file:
+        with open('new_data_filtered_' + dir + str(timestamp + 1) + ".txt", 'r') as file:
             for line in file:
                 test_error_values = line.split(' & ')
                 mae.append(float(test_error_values[0]))
@@ -75,11 +71,13 @@ def get_avg_loss(dir):
         with open('avg_' + str(timestamp + 1) + ".txt", 'a+') as file:
             file.write(
                 "\multirow{2}{*}{LSTM} & \multirow{2}{*}{" + dir + "} & {avg} & \multirow{2}{*}{u=256, l=4, lr=1.35e-05, bs=16, ll=300, epochs=150} &\multirow{2}{*}{1}& " +
-                calc_avg(mae) + " & " + calc_avg(mse) + " & " + "{:e}".format(float(calc_avg(r2))) + " & " + calc_avg(nr) + " & " +
+                calc_avg(mae) + " & " + calc_avg(mse) + " & " + "{:e}".format(float(calc_avg(r2))) + " & " + calc_avg(
+                    nr) + " & " +
                 "\multirow{2}{*}{" + calc_avg(training_time) + "}" + " & " "\multirow{2}{*}{" + calc_avg(
                     total_time) + "}\\\\\n")
             file.write(
-                "&   & std & & &" + calc_std(mae) + " & " + calc_std(mse) + " & " + "{:e}".format(float(calc_std(r2))) + " & " + calc_std(
+                "&   & std & & &" + calc_std(mae) + " & " + calc_std(mse) + " & " + "{:e}".format(
+                    float(calc_std(r2))) + " & " + calc_std(
                     nr) + " &  & \\\\\n")
         list_of_mae.append(mae)
         list_of_mse.append(mse)
