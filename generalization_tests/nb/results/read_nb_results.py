@@ -4,8 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-def remove_outliers(data):
-    cleaned_data = []
+def calculate_outliers(data):
     for inner_list in data:
         data_arr = np.array(inner_list, dtype=np.float64)
 
@@ -14,21 +13,17 @@ def remove_outliers(data):
 
         IQR = Q3 - Q1
 
-        lower_bound = Q1 - 2 * IQR
-        upper_bound = Q3 + 2 * IQR
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5  * IQR
         print(len(data_arr))
         print(len([x for x in data_arr if lower_bound <= x <= upper_bound]))
-        cleaned_data.append([x for x in data_arr if lower_bound <= x <= upper_bound])
-
-    return cleaned_data
 
 
 def create_boxplot(loss, name, timestamp, dir):
     print(dir + " " + name)
-    loss = remove_outliers(loss)
+    calculate_outliers(loss)
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 8))
-
-    plt.boxplot(loss)
+    plt.boxplot(loss, showfliers=False)
     plt.xlabel('Timestamps ahead', fontsize=20)
     plt.ylabel('Metric ' + name, fontsize=20)
     plt.title('Naive benchmark ' + name, fontsize=22)
