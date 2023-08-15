@@ -4,8 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-def remove_outliers(data):
-    cleaned_data = []
+def calculate_outliers(data):
     for inner_list in data:
         data_arr = np.array(inner_list, dtype=np.float64)
 
@@ -18,16 +17,13 @@ def remove_outliers(data):
         upper_bound = Q3 + 2 * IQR
         print(len(data_arr))
         print(len([x for x in data_arr if lower_bound <= x <= upper_bound]))
-        cleaned_data.append([x for x in data_arr if lower_bound <= x <= upper_bound])
-
-    return cleaned_data
 
 def create_boxplot(loss, name, timestamp, dir):
     print(dir +" "+ name)
-    loss = remove_outliers(loss)
+    calculate_outliers(loss)
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 8))
 
-    plt.boxplot(loss)
+    plt.boxplot(loss, showfliers=False)
     plt.xlabel('Timestamps ahead', fontsize=20)
     plt.ylabel('Metric ' + name, fontsize=20)
     plt.title('Random forest ' + name, fontsize=22)
@@ -124,8 +120,8 @@ def get_avg_loss(dir):
 def main():
     # create_timestamp_files("test")
     # create_timestamp_files("validation")
-    get_avg_loss("test")
     get_avg_loss("validation")
+    get_avg_loss("test")
 
 
 if __name__ == "__main__":
