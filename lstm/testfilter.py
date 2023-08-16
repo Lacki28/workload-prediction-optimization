@@ -59,7 +59,7 @@ def plot_scaling_methods(data):
     in_days = in_hours * 24
     index = (data["start_time"] - 600000000) / in_days
 
-    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(10, 5))
+    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(16, 10))
     axs[0].plot(index,data["mean_CPU_usage"])
     axs[0].set_title('Raw data', fontsize=20)
     axs[0].set_xlabel('Time (days)', fontsize=18)
@@ -94,7 +94,7 @@ def plot_results_after(data):
     index = (data["start_time"] - 600000000) / in_days
     clean_data = df_trainnorm.copy()[~outliers]
 
-    fig, axs = plt.subplots(nrows=1, ncols=3)
+    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(16, 10))
     axs[0].plot(index,df_trainnorm["mean_CPU_usage"])
     axs[0].set_title('Normalized data', fontsize=20)
     axs[0].set_xlabel('Time (days)', fontsize=18)
@@ -130,7 +130,7 @@ def plot_results_before(data):
     clean_data = data.copy()[~outliers]
     clean_data = normalize_data_minMax(clean_data)
 
-    fig, axs = plt.subplots(nrows=1, ncols=3)
+    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(16, 10))
     axs[0].plot(index,df_trainnorm["mean_CPU_usage"])
     axs[0].set_title('Normalized data', fontsize=20)
     axs[0].set_xlabel('Time (days)', fontsize=18)
@@ -145,6 +145,41 @@ def plot_results_before(data):
     axs[2].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
     fig.suptitle('Operations before normalization', fontsize=20)
     plt.savefig('operations_before.png')
+    plt.show()
+
+def plot_results_before(data):
+    df_trainnorm=data.copy()
+    df_trainnorm = normalize_data_minMax(df_trainnorm)
+
+    df_trainsavg=data.copy().apply(lambda x: savgol_filter(x, 51, 4))
+    df_trainsavg = normalize_data_minMax(df_trainsavg)
+    z_scores = (data.copy() - np.mean(data.copy())) / np.std(data.copy())
+    threshold = 3
+    # Identify the outliers using the Z-score method
+    outliers = np.abs(z_scores) > threshold
+    in_seconds = 1000000
+    in_minutes = in_seconds * 60
+    in_hours = in_minutes * 60
+    in_days = in_hours * 24
+    index = (data["start_time"] - 600000000) / in_days
+    # Remove the outliers from the data set
+    clean_data = data.copy()[~outliers]
+    clean_data = normalize_data_minMax(clean_data)
+
+    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(16, 10))
+    axs[0].plot(index,df_trainnorm["mean_CPU_usage"])
+    axs[0].set_title('Normalized data', fontsize=20)
+    axs[0].set_xlabel('Time (days)', fontsize=18)
+    axs[0].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
+    axs[1].plot(index,df_trainsavg["mean_CPU_usage"])
+    axs[1].set_title('Savitzky-Golay filter', fontsize=20)
+    axs[1].set_xlabel('Time (days)', fontsize=18)
+    axs[1].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
+    axs[2].plot(index,clean_data["mean_CPU_usage"])
+    axs[2].set_title('Outliers removed', fontsize=20)
+    axs[2].set_xlabel('Time (days)', fontsize=18)
+    axs[2].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
+    plt.savefig('operations.png')
     plt.show()
 
 def read_data(path='../training'):

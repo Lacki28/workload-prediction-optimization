@@ -5,7 +5,7 @@ x = ['1', '2', '3', '4', '5', '6']
 num_columns = 5
 bar_width = 0.15
 column_names = ["ARIMA", "NB", "RF", "LSTM", "Transformer"]
-
+colors =['C0', 'C1', 'C2', 'C3', 'C4']
 # MSE
 values_x1 = [5.28e-08, 5.21e-08, 5.55e-08, 5.25e-08, 5.41e-08]
 values_x2 = [9.12e-08, 9.02e-08, 8.00e-08, 7.44e-08, 7.37e-08]
@@ -19,11 +19,11 @@ x_indexes = np.arange(len(x))
 
 for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
-            label=f'Data {column_names[i]}')
+            color=colors[i],label=f'Data {column_names[i]}')
 
-plt.xlabel('Number of time stamps ahead', fontsize=12)
-plt.ylabel('MSE', fontsize=12)
-plt.title('MSE of the prediction of job 3418324.', fontsize=12)
+plt.xlabel('Number of time stamps ahead', fontsize=16)
+plt.ylabel('MSE', fontsize=14)
+plt.title('MSE of the prediction of job 3418324.', fontsize=14)
 plt.xticks(x_indexes, x)
 plt.legend(fontsize=9.7)
 plt.savefig('MSE_univar.png')
@@ -53,20 +53,21 @@ plt.close()
 
 
 # NR arima rf lstm trans
-values_x1 = [0.57532, 0.67374, 0.57452, 0.72284]
-values_x2 = [0.7918, 0.8661, 0.8057, 0.6114]
-values_x3 = [1.00306, 1.00758, 0.99891, 0.53817]
-values_x4 = [1.26954, 1.17355, 1.19668, 0.53817]
-values_x5 = [1.74742, 1.37891, 1.4995, 0.53817]
-values_x6 = [2.71e+15, 1.93644, 2.77483, 0.34547]
+values_x1 = [0.57532, 0.67374, 0.57452, 0.58288]
+values_x2 = [0.7918, 0.8661, 0.8057, 0.80934]
+values_x3 = [1.00306, 1.00758, 0.99891, 0.98877]
+values_x4 = [1.26954, 1.17355, 1.19668, 1.18547]
+values_x5 = [1.74742, 1.37891, 1.4995, 1.48976]
+values_x6 = [2.71e+15, 1.93644, 2.77483, 2.13904]
 num_columns = 4
 column_names = ["ARIMA", "RF", "LSTM", "Transformer"]
 values = [values_x1, values_x2, values_x3, values_x4, values_x5, values_x6]
 x_indexes = np.arange(len(x))
+colors =['C0', 'C2', 'C3', 'C4']
 
 for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
-            label=f'Data {column_names[i]}')
+            color=colors[i],label=f'Data {column_names[i]}')
 
 plt.xlabel('Number of time stamps ahead', fontsize=12)
 max_y_value=3

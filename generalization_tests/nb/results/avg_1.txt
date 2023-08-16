@@ -2,3 +2,7 @@
 &   & std & & &0.05611 & 0.03217 & 0.42036 &  &  & \\
 \multirow{2}{*}{NB} & \multirow{2}{*}{test} & {avg} & \multirow{2}{*}{-} &\multirow{2}{*}{1}& 0.02129 & 0.0205 & -0.00377 & \multirow{2}{*}{$\infty$} & \multirow{2}{*}{-} & \multirow{2}{*}{0.9518}\\
 &   & std & & &0.05912 & 0.07081 & 0.80854 &  &  & \\
+\multirow{2}{*}{NB} & \multirow{2}{*}{validation} & {avg} & \multirow{2}{*}{-} &\multirow{2}{*}{1}& 0.01863 & 0.00814 & 0.64928 & \multirow{2}{*}{$\infty$} & \multirow{2}{*}{-} & \multirow{2}{*}{0.9808}\\
+&   & std & & &0.05611 & 0.03217 & 0.42036 &  &  & \\
+\multirow{2}{*}{NB} & \multirow{2}{*}{test} & {avg} & \multirow{2}{*}{-} &\multirow{2}{*}{1}& 0.02129 & 0.0205 & -0.00377 & \multirow{2}{*}{$\infty$} & \multirow{2}{*}{-} & \multirow{2}{*}{0.9518}\\
+&   & std & & &0.05912 & 0.07081 & 0.80854 &  &  & \\
