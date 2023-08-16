@@ -40,6 +40,7 @@ class SequenceDataset(Dataset):
             x = torch.cat((padding, x), 0)
         return x, self.y[i: i + self.t]  # return target n time stamps ahead
 
+
 class TimeSeriesTransformer(nn.Module):
 
     def __init__(self, input_dim, output_dim, d_model, nhead, dim_feedforward, num_layers, sequence_length):
@@ -61,6 +62,7 @@ class TimeSeriesTransformer(nn.Module):
         output = output.view(batch_size, -1)  # Shape: (batch_size, seq_len * d_model)
         output = self.decoder(output)  # Shape: (batch_size, output_dim)
         return output
+
 
 def mse(prediction, real_value):
     MSE = torch.square(torch.subtract(real_value, prediction)).mean()
@@ -89,10 +91,10 @@ def my_loss_fn(output, target):
 
 
 def my_r2_fn(output, target):
-    output_has_nan = torch.isnan(output).any().item()
+    output_has_nan = torch.isnan(output.cpu()).any().item()
     if output_has_nan:
         return - math.inf
-    r2 = sm.r2_score(target, output)
+    r2 = sm.r2_score(target.cpu(), output.cpu())
     if math.isnan(r2):
         return - math.inf
     return r2
@@ -130,6 +132,7 @@ def test_model(data_loader, model, optimizer, ix_epoch, device, t):
     r2 = (r2 / len(data_loader))
     return r2, loss
 
+
 def train_model(data_loader, model, optimizer, device, t):
     model.train()
     for i, (X, y) in enumerate(data_loader):
@@ -146,7 +149,7 @@ def train_model(data_loader, model, optimizer, device, t):
 
 
 def predict(data_loader, model, device):
-    cpu = torch.tensor([])
+    cpu = torch.empty(0, device=device)  # Initialize an empty tensor on the desired device
     model.eval()
     with torch.no_grad():
         for i, (X, y) in enumerate(data_loader):
@@ -228,7 +231,7 @@ def get_min_max_values_of_training_data(df):
 def get_training_data(t, target, features, df_train=None, config=None):
     # normalize data: this improves model accuracy as it gives equal weights/importance to each variable
     # first use the filter, then normalize the data
-    # df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
+    df_train = df_train.apply(lambda x: savgol_filter(x, 51, 4))
     df_train = normalize_data_minMax(features, df_train)
     train_sequence = SequenceDataset(
         df_train,
@@ -253,7 +256,7 @@ def get_test_data(t, target, features, df_test=None, config=None):
 
 def train_and_test_model(config, checkpoint_dir="checkpoint", training_files=None, validation_files=None, t=None,
                          epochs=None,
-                         features=None, target=None):
+                         features=None, target=None, device=None):
     training_files = read_files(training_files, True)
     validation_files = read_files(validation_files, False)
     training_loaders = list()
@@ -283,19 +286,18 @@ def train_and_test_model(config, checkpoint_dir="checkpoint", training_files=Non
         model.load_state_dict(model_state)
         optimizer.load_state_dict(optimizer_state)
 
-
     for ix_epoch in range(epochs):  # in each epoch, train with the file that performs worse
-        r2s =list()
-        losses =list()
+        r2s = list()
+        losses = list()
         for training_loader in training_loaders:
-            # validation_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False
             train_model(training_loader, model, optimizer=optimizer, device=device, t=t)
         for validation_loader in validation_loaders:
-            r2, loss=test_model(validation_loader, model, optimizer, ix_epoch, device=device, t=t)
+            r2, loss = test_model(validation_loader, model, optimizer, ix_epoch, device=device, t=t)
             r2s.append(r2)
             losses.append(loss)
         tune.report(r2=sum(r2s),
-                    loss=sum(losses))  # The tune.report() function is used to report the loss and r2 of the model to the Ray Tune framework. This function takes a dictionary of metrics as input, where the keys are the names of the metrics and the values are the metric values.
+                    loss=sum(
+                        losses))  # The tune.report() function is used to report the loss and r2 of the model to the Ray Tune framework. This function takes a dictionary of metrics as input, where the keys are the names of the metrics and the values are the metric values.
 
 
 def read_file_names(file_path, path, index_start, index_end):
@@ -325,7 +327,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     torch.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    file_path = 'transformer.txt'
+    file_path = 'results/transformer.txt'
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length) + ", epochs=" + str(epochs))
     start_time = time.time()
     scheduler = ASHAScheduler(
@@ -336,18 +338,18 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         reduction_factor=2)  # if it is set to 2, then half of the configurations survive each round.
     reporter = CLIReporter(
         metric_columns=["loss", "r2", "training_iteration"])
-    #Best trial config: {'sequence_length': 1, 'd_model': 32, 'nhead': 1, 'dim_feedforward': 64, 'num_layers': 1, 'lr': 2.0728938773827123e-05, 'batch_size': 16}
- #Best trial config: {'sequence_length': 1, 'd_model': 16, 'nhead': 1, 'dim_feedforward': 64, 'num_layers': 1, 'lr': 1.8196927794602183e-05, 'batch_size': 32}
-    #Best trial config: {'sequence_length': 1, 'd_model': 16, 'nhead': 1, 'dim_feedforward': 64, 'num_layers': 1, 'lr': 1.3967205462958928e-05, 'batch_size': 32}
+    # Best trial config: {'sequence_length': 1, 'd_model': 32, 'nhead': 1, 'dim_feedforward': 64, 'num_layers': 1, 'lr': 2.0728938773827123e-05, 'batch_size': 16}
+    # Best trial config: {'sequence_length': 1, 'd_model': 16, 'nhead': 1, 'dim_feedforward': 64, 'num_layers': 1, 'lr': 1.8196927794602183e-05, 'batch_size': 32}
+    # Best trial config: {'sequence_length': 1, 'd_model': 16, 'nhead': 1, 'dim_feedforward': 64, 'num_layers': 1, 'lr': 1.3967205462958928e-05, 'batch_size': 32}
 
     config = {
         "sequence_length": sequence_length,
-        "d_model": tune.grid_search([16, 32]),
+        "d_model": tune.grid_search([32]),
         "nhead": tune.grid_search([1]),
-        "dim_feedforward": tune.grid_search([64]),
+        "dim_feedforward": tune.grid_search([16]),
         "num_layers": tune.grid_search([1]),
-        "lr": tune.loguniform(0.00001, 0.00005),  # takes lower and upper bound
-        "batch_size": tune.grid_search([16, 32]),
+        "lr": tune.loguniform(0.000001, 0.000005),  # takes lower and upper bound
+        "batch_size": tune.grid_search([64, 128]),
     }
     training_files = read_file_names(file_path, "0", 0, 50)
     training_files_csv = read_files(training_files, True)
@@ -355,11 +357,14 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
     validation_files_csv = read_files(validation_files, False)
     test_files = read_file_names(file_path, "1", 0, 50)
     test_files_csv = read_files(test_files, False)
+    device = "cpu"
+    if torch.cuda.is_available():
+        device = "cuda:0"
     result = tune.run(
         partial(train_and_test_model, training_files=training_files, validation_files=validation_files, t=t,
                 epochs=epochs, features=features,
-                target=target),
-        resources_per_trial={"cpu": 4},
+                target=target, device=device),
+        resources_per_trial={"cpu": 4, "gpu": 0.25},
         # By default, Tune automatically runs N concurrent trials, where N is the number of CPUs (cores) on your machine.
         config=config,
         num_samples=num_samples,  # how often I sample from hyperparameters
@@ -388,7 +393,6 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
                                                best_trial.config["nhead"], best_trial.config["dim_feedforward"],
                                                best_trial.config["num_layers"], sequence_length)
 
-    device = "cpu"
     best_trained_model.to(device)
 
     best_checkpoint_dir = best_trial.checkpoint.dir_or_data
@@ -425,12 +429,12 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
                                                                      device, best_trial.config)
 
     print("calculate results")
-    calculate_prediction_results(t, pred_cpu_train, act_cpu_train, start_time, training_time, "new_data_filtered_train")
-    calculate_prediction_results(t, pred_cpu_test, act_cpu_test, start_time, training_time, "new_data_filtered_test")
+    calculate_prediction_results(t, pred_cpu_train, act_cpu_train, start_time, training_time, "new_data_train")
+    calculate_prediction_results(t, pred_cpu_test, act_cpu_test, start_time, training_time, "new_data_test")
     calculate_prediction_results(t, pred_cpu_validation, act_cpu_validation, start_time, training_time,
-                                 "new_data_filtered_validation")
+                                 "new_data_validation")
 
 
 if __name__ == "__main__":
-    main(t=6, sequence_length=1, epochs=100, features=['mean_CPU_usage'],
-         target=['mean_CPU_usage'], num_samples=2)
+    main(t=6, sequence_length=1, epochs=300, features=['mean_CPU_usage'],
+         target=['mean_CPU_usage'], num_samples=4)
