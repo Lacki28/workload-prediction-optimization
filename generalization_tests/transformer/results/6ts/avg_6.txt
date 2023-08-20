@@ -1,0 +1,4 @@
+\multirow{2}{*}{Transformer} & \multirow{2}{*}{validation} & {avg} & \multirow{2}{*}{dm=32, nh=1, lr=4.04e-06, bs=128, df=16, nl=1 epochs=300} &\multirow{2}{*}{1}& 0.04612 & 0.04375 & -3.999057e+03 & 1.36842 & \multirow{2}{*}{11747.27} & \multirow{2}{*}{12654.5438}\\
+&   & std & & &0.13709 & 0.17731 & 2.750951e+04 & 0.49115 &  & \\
+\multirow{2}{*}{Transformer} & \multirow{2}{*}{test} & {avg} & \multirow{2}{*}{dm=32, nh=1, lr=4.04e-06, bs=128, df=16, nl=1 epochs=300} &\multirow{2}{*}{1}& 0.04625 & 0.05202 & -3.035443e+05 & 1.20319 & \multirow{2}{*}{11747.27} & \multirow{2}{*}{12654.3704}\\
+&   & std & & &0.12651 & 0.20721 & 1.498698e+06 & 0.37242 &  & \\
