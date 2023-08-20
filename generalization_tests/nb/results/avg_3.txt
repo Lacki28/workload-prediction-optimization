@@ -1,8 +1,0 @@
-\multirow{2}{*}{NB} & \multirow{2}{*}{validation} & {avg} & \multirow{2}{*}{-} &\multirow{2}{*}{1}& 0.02606 & 0.01558 & 0.51715 & \multirow{2}{*}{$\infty$} & \multirow{2}{*}{-} & \multirow{2}{*}{0.919}\\
-&   & std & & &0.07589 & 0.0578 & 0.50622 &  &  & \\
-\multirow{2}{*}{NB} & \multirow{2}{*}{test} & {avg} & \multirow{2}{*}{-} &\multirow{2}{*}{1}& 0.02963 & 0.03433 & -0.01396 & \multirow{2}{*}{$\infty$} & \multirow{2}{*}{-} & \multirow{2}{*}{0.8952}\\
-&   & std & & &0.08296 & 0.11844 & 0.68246 &  &  & \\
-\multirow{2}{*}{NB} & \multirow{2}{*}{validation} & {avg} & \multirow{2}{*}{-} &\multirow{2}{*}{1}& 0.02606 & 0.01558 & 0.51715 & \multirow{2}{*}{$\infty$} & \multirow{2}{*}{-} & \multirow{2}{*}{0.919}\\
-&   & std & & &0.07589 & 0.0578 & 0.50622 &  &  & \\
-\multirow{2}{*}{NB} & \multirow{2}{*}{test} & {avg} & \multirow{2}{*}{-} &\multirow{2}{*}{1}& 0.02963 & 0.03433 & -0.01396 & \multirow{2}{*}{$\infty$} & \multirow{2}{*}{-} & \multirow{2}{*}{0.8952}\\
-&   & std & & &0.08296 & 0.11844 & 0.68246 &  &  & \\
