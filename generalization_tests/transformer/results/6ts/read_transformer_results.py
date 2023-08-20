@@ -28,7 +28,7 @@ def create_boxplot(loss, name, timestamp, dir):
     plt.xlabel('Timestamps ahead', fontsize=20)
     plt.ylabel('Metric ' + name, fontsize=20)
     plt.title('Transformer ' + name, fontsize=22)
-    plt.savefig('Transformer_' + dir + '_' + name + '_loss_t' + str(timestamp + 1) + '.png')
+    plt.savefig('Transformer_ts6_' + dir + '_' + name + '_loss_t' + str(timestamp + 1) + '.png')
     plt.close()
 
 
