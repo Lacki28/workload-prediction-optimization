@@ -11,7 +11,6 @@ import torch.nn as nn
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
-from scipy.signal import savgol_filter
 from torch.utils.data import Dataset, DataLoader
 
 min_max_dict = {}
@@ -352,11 +351,11 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
     config = {  #
         "sequence_length": sequence_length,
-        "units": tune.grid_search([128, 256]),
-        "layers": tune.grid_search([4, 5]),
+        "units": tune.grid_search([256]),
+        "layers": tune.grid_search([3, 4]),
         "lin_layers": tune.grid_search([300]),
         "lr": tune.loguniform(0.000008, 0.00008),  # takes lower and upper bound
-        "batch_size": tune.grid_search([16]),
+        "batch_size": tune.grid_search([16, 32]),
     }
     training_files = read_file_names(file_path, "0", 0, 50)
     training_files_csv = read_files(training_files, True)
@@ -371,7 +370,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         partial(train_and_test_model, training_files=training_files, validation_files=validation_files, t=t,
                 epochs=epochs, features=features,
                 target=target, device=device),
-        resources_per_trial={"cpu": 4, "gpu": 0.25},
+        resources_per_trial={"cpu": 4, "gpu": 0.5},
         # By default, Tune automatically runs N concurrent trials, where N is the number of CPUs (cores) on your machine.
         config=config,
         num_samples=num_samples,  # how often I sample from hyperparameters

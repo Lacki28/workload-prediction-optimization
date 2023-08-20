@@ -1,8 +1,0 @@
-{
-  "batch_size": 16,
-  "layers": 4,
-  "lin_layers": 300,
-  "lr": 1.3485644384325071e-05,
-  "sequence_length": 1,
-  "units": 256
-}

@@ -371,7 +371,7 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
         partial(train_and_test_model, training_files=training_files, validation_files=validation_files, t=t,
                 epochs=epochs, features=features,
                 target=target, device=device),
-        resources_per_trial={"cpu": 4, "gpu": 0.25},
+        resources_per_trial={"cpu": 4, "gpu": 0.5},
         # By default, Tune automatically runs N concurrent trials, where N is the number of CPUs (cores) on your machine.
         config=config,
         num_samples=num_samples,  # how often I sample from hyperparameters
