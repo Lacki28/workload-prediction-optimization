@@ -65,11 +65,11 @@ def plot_scaling_methods(data):
     axs[0].set_xlabel('Time (days)', fontsize=18)
     axs[0].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
     axs[1].plot(index,df_trainstd["mean_CPU_usage"])
-    axs[1].set_title('Standardization', fontsize=20)
+    axs[1].set_title('Standardisation', fontsize=20)
     axs[1].set_xlabel('Time (days)', fontsize=18)
     axs[1].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
     axs[2].plot(index,df_trainnorm["mean_CPU_usage"])
-    axs[2].set_title('Normalization', fontsize=20)
+    axs[2].set_title('Normalisation', fontsize=20)
     axs[2].set_xlabel('Time (days)', fontsize=18)
     axs[2].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
     # plt.title("Changes before normalization")
@@ -96,7 +96,7 @@ def plot_results_after(data):
 
     fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(16, 10))
     axs[0].plot(index,df_trainnorm["mean_CPU_usage"])
-    axs[0].set_title('Normalized data', fontsize=20)
+    axs[0].set_title('Normalised data', fontsize=20)
     axs[0].set_xlabel('Time (days)', fontsize=18)
     axs[0].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
     axs[1].plot(index,df_trainsavg["mean_CPU_usage"])
@@ -107,7 +107,7 @@ def plot_results_after(data):
     axs[2].set_title('Noise removed',fontsize=20)
     axs[2].set_xlabel('Time (days)', fontsize=18)
     axs[2].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
-    fig.suptitle('Operations after normalization', fontsize=20)
+    fig.suptitle('Operations after normalisation', fontsize=20)
     plt.savefig('operations_after.png')
     plt.show()
 #
@@ -169,7 +169,7 @@ def plot_results(data):
 
     fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(18, 10))
     axs[0].plot(index,df_trainnorm["mean_CPU_usage"])
-    axs[0].set_title('Normalized data', fontsize=20)
+    axs[0].set_title('Normalised data', fontsize=20)
     axs[0].set_xlabel('Time (days)', fontsize=18)
     axs[0].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
     axs[1].plot(index,df_trainsavg["mean_CPU_usage"])
@@ -195,6 +195,7 @@ def main():
     data = pd.read_csv("../../sortedGroupedJobFiles/3418324.csv", ",")
     plot_scaling_methods(data)
     plot_results_after(data)
+    plot_results(data)
 
 
 

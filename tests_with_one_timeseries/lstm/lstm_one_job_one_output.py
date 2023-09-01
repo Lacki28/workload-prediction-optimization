@@ -415,5 +415,5 @@ def main(t=1, sequence_length=12, epochs=2000, features=['mean_CPU_usage'], targ
 
 if __name__ == "__main__":
     for history in (1, 6, 12):
-        main(t=6, sequence_length=history, epochs=100, features=['mean_CPU_usage'],
+        main(t=6, sequence_length=history, epochs=1, features=['mean_CPU_usage'],
              target=['mean_CPU_usage'], num_samples=2)
