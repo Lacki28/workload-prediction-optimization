@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 x = ['1', '2', '3', '4', '5', '6']
 num_columns = 2
 bar_width = 0.15
-column_names = ["Best result with max r2, 200 ep","Best result with min loss, 200 epochs"]
+column_names = ["Best result with max r2","Best result with min loss"]
 colors = ['C3', 'C2']
 
 # MSE - 200
@@ -22,7 +22,7 @@ for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
             label=f'{column_names[i]}', alpha=0.5, color=f'{colors[i]}')
 
-plt.xlabel('Number of time stamps ahead', fontsize=12)
+plt.xlabel('Number of timestamps ahead', fontsize=12)
 plt.ylabel('MSE', fontsize=12)
 plt.title('MSE of the prediction of job 3418324, with 200 epochs training.', fontsize=11)
 plt.xticks(x_indexes, x)
@@ -60,7 +60,7 @@ for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
             label=f'{column_names[i]}', alpha=alphas[i], color=f'{colors[i]}')
 
-plt.xlabel('Number of time stamps ahead', fontsize=12)
+plt.xlabel('Number of timestamps ahead', fontsize=12)
 plt.ylabel('MSE', fontsize=12)
 plt.title('MSE of the prediction of job 3418324.', fontsize=11)
 plt.xticks(x_indexes, x)
@@ -93,7 +93,7 @@ for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
             label=f'{column_names[i]}', alpha=0.7, color=f'{colors[i]}')
 
-plt.xlabel('Number of time stamps ahead', fontsize=12)
+plt.xlabel('Number of timestamps ahead', fontsize=12)
 plt.ylabel('MSE', fontsize=12)
 plt.title('MSE of the prediction of job 3418324, with 300 epochs training.', fontsize=12)
 
@@ -120,7 +120,7 @@ plt.close()
 #     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
 #             label=f'{column_names[i]}', alpha=0.5, color=f'{colors[i]}')
 #
-# plt.xlabel('Number of time stamps ahead', fontsize=12)
+# plt.xlabel('Number of timestamps ahead', fontsize=12)
 # plt.ylabel('MSE', fontsize=12)
 # plt.title('MSE of the prediction of job 3418324, with 50 epochs training.', fontsize=12)
 # plt.xticks(x_indexes, x)
@@ -143,7 +143,7 @@ plt.close()
 #     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
 #             alpha=0.75, label=f'{column_names[i]}')
 #
-# plt.xlabel('Number of time stamps ahead', fontsize=12)
+# plt.xlabel('Number of timestamps ahead', fontsize=12)
 # plt.ylabel('MSE', fontsize=12)
 # plt.title('MSE of the prediction of job 3418324, with 100 epochs training.', fontsize=12)
 # plt.xticks(x_indexes, x)
@@ -170,7 +170,7 @@ plt.close()
 #     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
 #             alpha=alpha[i], label=f'{column_names[i]}', color=f'{colors[i]}')
 #
-# plt.xlabel('Number of time stamps ahead', fontsize=12)
+# plt.xlabel('Number of timestamps ahead', fontsize=12)
 # plt.ylabel('MSE', fontsize=12)
 # plt.title('MSE of the prediction of job 3418324, with 100/150 epochs training.', fontsize=12)
 # plt.xticks(x_indexes, x)
@@ -206,7 +206,7 @@ plt.close()
 #     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
 #             alpha=alpha[i], label=f'{column_names[i]}', color=f'{colors[i]}')
 #
-# plt.xlabel('Number of time stamps ahead', fontsize=12)
+# plt.xlabel('Number of timestamps ahead', fontsize=12)
 # plt.ylabel('MSE', fontsize=12)
 # plt.title('MSE of the prediction of job 3418324, with 100 epochs training.', fontsize=12)
 # plt.xticks(x_indexes, x)
@@ -243,7 +243,7 @@ plt.close()
 # #     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
 # #             label=f'{column_names[i]}')
 # #
-# # plt.xlabel('Number of time stamps ahead', fontsize=12)
+# # plt.xlabel('Number of timestamps ahead', fontsize=12)
 # # plt.ylabel('R2', fontsize=12)
 # # plt.title('R2 of the prediction of job 3418324.', fontsize=12)
 # # plt.xticks(x_indexes, x)

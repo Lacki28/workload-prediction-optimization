@@ -10,17 +10,19 @@ from sklearn.cluster import DBSCAN
 import shutil
 
 def plot_number_of_jobs_per_class(class_files):
+    colors = ['green', (0.7, 0, 0)]
     num_values = [len(values) for values in class_files.values()]
-    plt.bar(range(len(num_values)), num_values)
+    plt.bar(range(len(num_values)), num_values,color=colors, alpha=0.75)
     plt.xticks(range(len(num_values)), class_files.keys())
-    plt.title('Number of jobs per clusters')
-    plt.xlabel('Clusters')
-    plt.ylabel('Number of Jobs')
-    plt.show()
+    plt.title('Number of jobs per cluster', fontsize=16)
+    plt.xlabel('Clusters', fontsize=14)
+    plt.ylabel('Number of Jobs', fontsize=14)
+    plt.savefig('clusters.png')
+
 
 def copy_files(destination, group,files):
     src = "/home/anna/PycharmProjects/workload-prediction-optimization/sortedGroupedJobFiles/"
-    dst = "/home/anna/PycharmProjects/workload-prediction-optimization/"+destination+"/"+group+"/"
+    dst = "/home/anna/PycharmProjects/workload-prediction-optimization/clustered_jobs/"+destination+"/"
     for file in files:
         shutil.copyfile(src+file, dst+file)
 
@@ -46,7 +48,7 @@ def main():
     print(f"number of non-zero: {np.count_nonzero(matrix)}")
     print(f"number of zeros: {matrix.size - np.count_nonzero(matrix)}")
 
-    dbscan = DBSCAN(metric='precomputed', eps=0.0005, min_samples=20)
+    dbscan = DBSCAN(metric='precomputed', eps=0.00005, min_samples=50)
     labels = dbscan.fit_predict(matrix)
     print(f"Clusters: {np.unique(labels)}")
     class_files = defaultdict(list)
@@ -55,17 +57,17 @@ def main():
     group_0 = class_files[0]
     size = int(len(group_0) * 0.8)
     g0_train, g0_test = group_0[0:size], group_0[size:len(group_0)]
-    copy_files("training", "0", g0_train)
-    print(len((g0_train)))
-    copy_files("test", "0", g0_test)
-    print(len((g0_test)))
+    # copy_files("0", "0", g0_train)
+    # print(len((g0_train)))
+    # copy_files("test", "0", g0_test)
+    # print(len((g0_test)))
     group_1 = class_files[-1]
     size = int(len(group_1) * 0.8)
     g1_train, g1_test = group_1[0:size], group_1[size:len(group_1)]
-    copy_files("training", "-1", g1_train)
-    print(len((g1_train)))
-    copy_files("test", "-1", g1_test)
-    print(len((g1_test)))
+    # copy_files("1", "-1", g1_train)
+    # print(len((g1_train)))
+    # copy_files("test", "-1", g1_test)
+    # print(len((g1_test)))
 
 
     plot_number_of_jobs_per_class(class_files)

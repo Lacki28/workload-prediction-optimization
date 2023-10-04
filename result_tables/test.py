@@ -19,7 +19,7 @@ x_indexes = np.arange(len(x))
 
 for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
-            color=colors[i],label=f'Data {column_names[i]}')
+            color=colors[i],label=column_names[i])
 
 plt.xlabel('Number of time stamps ahead', fontsize=16)
 plt.ylabel('MSE', fontsize=14)
@@ -41,7 +41,7 @@ x_indexes = np.arange(len(x))
 
 for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
-            label=f'Data {column_names[i]}')
+            label=column_names[i])
 
 plt.xlabel('Number of time stamps ahead', fontsize=12)
 plt.ylabel('R2 score', fontsize=12)
@@ -67,13 +67,13 @@ colors =['C0', 'C2', 'C3', 'C4']
 
 for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
-            color=colors[i],label=f'Data {column_names[i]}')
+            color=colors[i],label=column_names[i])
 
 plt.xlabel('Number of time stamps ahead', fontsize=12)
 max_y_value=3
 plt.ylim(0, max_y_value)
-plt.ylabel('Naïve Ratio score', fontsize=12)
-plt.title('Naïve Ratio score of the prediction of job 3418324.', fontsize=12)
+plt.ylabel('Naïve Ratio', fontsize=12)
+plt.title('Naïve Ratio of the prediction of job 3418324.', fontsize=12)
 plt.xticks(x_indexes, x)
 plt.legend(fontsize=9.7)
 plt.savefig('NR_univar.png')
@@ -118,7 +118,7 @@ plt.xticks(x + bar_width / 2, column_names)
 # Set plot title and labels
 plt.xlabel('Prediction method', fontsize=12)
 plt.ylabel('Time in seconds', fontsize=12)
-plt.title('Time of the prediction.', fontsize=12)
+plt.title('Time needed for the prediction.', fontsize=12)
 plt.legend(fontsize=9.7)
 plt.savefig('time_univar.png')
 plt.close()

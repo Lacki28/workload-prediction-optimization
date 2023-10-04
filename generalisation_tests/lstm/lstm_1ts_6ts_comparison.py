@@ -23,7 +23,7 @@ for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
             label=f'{column_names[i]}', alpha=alphas[i], color=f'{colors[i]}')
 
-plt.xlabel('Number of time stamps ahead', fontsize=12)
+plt.xlabel('Number of timestamps ahead', fontsize=12)
 plt.ylabel('MSE', fontsize=12)
 plt.title('Comparison of the mean of the MSE.', fontsize=11)
 plt.xticks(x_indexes, x)
@@ -56,7 +56,7 @@ for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
             label=f'{column_names[i]}', alpha=alphas[i], color=f'{colors[i]}')
 
-plt.xlabel('Number of time stamps ahead', fontsize=12)
+plt.xlabel('Number of timestamps ahead', fontsize=12)
 plt.ylabel('MSE', fontsize=12)
 plt.title('Comparison of the standard deviation of the MSE.', fontsize=11)
 plt.xticks(x_indexes, x)

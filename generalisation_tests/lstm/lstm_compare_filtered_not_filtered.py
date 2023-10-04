@@ -21,8 +21,9 @@ base_color = plt.rcParams['axes.prop_cycle'].by_key()['color'][0]
 for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
             label=f'{column_names[i]}', alpha=0.5, color=f'{colors[i]}')
+plt.ylim(0, 0.2)
 
-plt.xlabel('Number of time stamps ahead', fontsize=12)
+plt.xlabel('Number of timestamps ahead', fontsize=12)
 plt.ylabel('MSE', fontsize=12)
 plt.title('MSE of the prediction of job 3418324, with 50 epochs training, without filter.', fontsize=11)
 plt.xticks(x_indexes, x)
@@ -46,8 +47,9 @@ x_indexes = np.arange(len(x))
 for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
             label=f'{column_names[i]}', alpha=0.5, color=f'{colors[i]}')
+plt.ylim(0, 0.125)
 
-plt.xlabel('Number of time stamps ahead', fontsize=12)
+plt.xlabel('Number of timestamps ahead', fontsize=12)
 plt.ylabel('MSE', fontsize=12)
 plt.title('MSE of the prediction of job 3418324, with 50 epochs training.', fontsize=12)
 plt.xticks(x_indexes, x)
@@ -70,7 +72,8 @@ for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
             alpha=0.75, label=f'{column_names[i]}')
 
-plt.xlabel('Number of time stamps ahead', fontsize=12)
+plt.ylim(0, 0.125)
+plt.xlabel('Number of timestamps ahead', fontsize=12)
 plt.ylabel('MSE', fontsize=12)
 plt.title('MSE of the prediction of job 3418324, with 100 epochs training.', fontsize=12)
 plt.xticks(x_indexes, x)
@@ -96,8 +99,8 @@ alpha = [0.75, 1]
 for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
             alpha=alpha[i], label=f'{column_names[i]}', color=f'{colors[i]}')
-
-plt.xlabel('Number of time stamps ahead', fontsize=12)
+plt.ylim(0, 0.125)
+plt.xlabel('Number of timestamps ahead', fontsize=12)
 plt.ylabel('MSE', fontsize=12)
 plt.title('MSE of the prediction of job 3418324, with 100/150 epochs training.', fontsize=12)
 plt.xticks(x_indexes, x)
@@ -132,10 +135,10 @@ x_indexes = np.arange(len(x))
 for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
             alpha=alpha[i], label=f'{column_names[i]}', color=f'{colors[i]}')
-
-plt.xlabel('Number of time stamps ahead', fontsize=12)
+plt.ylim(0, 0.125)
+plt.xlabel('Number of timestamps ahead', fontsize=12)
 plt.ylabel('MSE', fontsize=12)
-plt.title('MSE of the prediction of job 3418324, with 100 epochs training.', fontsize=12)
+plt.title('MSE of the prediction of job 3418324, with 100/150 epochs training.', fontsize=12)
 plt.xticks(x_indexes, x)
 plt.legend(fontsize=9.7)
 plt.savefig('150ep_not_filtered.png')
@@ -170,7 +173,7 @@ plt.close()
 #     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
 #             label=f'{column_names[i]}')
 #
-# plt.xlabel('Number of time stamps ahead', fontsize=12)
+# plt.xlabel('Number of timestamps ahead', fontsize=12)
 # plt.ylabel('R2', fontsize=12)
 # plt.title('R2 of the prediction of job 3418324.', fontsize=12)
 # plt.xticks(x_indexes, x)

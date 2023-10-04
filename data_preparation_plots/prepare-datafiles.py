@@ -1,38 +1,22 @@
 import csv
+import os.path
 import shutil
-from dask import delayed
-import dask.dataframe as dd
-from dask.dataframe import from_pandas
+import threading
+from io import open
+
 import dask.dataframe as dd
 import numpy as np
 import pandas as pd
-import os.path
-from io import open
 import seaborn as sns
-import threading
-from matplotlib import pyplot as plt
-from sklearn.impute import KNNImputer, SimpleImputer
 from dask import delayed, compute
+from matplotlib import pyplot as plt
 
+# path of the task_usage folder
 dir = "../../Desktop/data/task_usage/"
 files = 500
 
 data_frames = []
 jobs_file = "job_ids_with_high_priority_tasks.csv"
-
-
-def main():
-    # create_relevant_files()
-    # fill_files()
-    # copy_larger_files()
-    # process_files_threaded(12)
-    # print("preprocessed")
-    # remove_small_files("sortedJobFiles")  # four files only have one line, remove them and files that are too short (35) - you should have not 3758 files
-    # group_data_frames_threaded(12)
-    # remove_small_files("sortedGroupedJobFiles")
-    # We should not have 2261 job files left that have been preprocessed, sorted and filtered
-    # add_scheduling_class()
-    correlation()
 
 
 @delayed
@@ -262,6 +246,19 @@ def create_relevant_files():
         writer.writerow(column_names)
         f.close()
 
+def main():
+    create_relevant_files()
+    fill_files()
+    copy_larger_files()  # remove small short
+    process_files_threaded(12)
+    print("preprocessed")
+    remove_small_files(
+        "sortedJobFiles")  # four files only have one line, remove them and files that are too short (35) - 3758 files
+    group_data_frames_threaded(12)
+    remove_small_files("sortedGroupedJobFiles")
+    # We should now have 2261 job files left that have been preprocessed, sorted and filtered
+    add_scheduling_class()
+    correlation()
 
 if __name__ == "__main__":
     main()

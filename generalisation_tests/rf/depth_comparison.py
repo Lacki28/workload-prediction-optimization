@@ -22,10 +22,10 @@ for i in range(num_columns):
     plt.bar(x_indexes + (i - (num_columns - 1) / 2) * bar_width, [values[j][i] for j in range(len(x))], width=bar_width,
             color=colors[i],label=f'Max depth {column_names[i]}')
 
-plt.xlabel('Number of time stamps ahead', fontsize=12)
+plt.xlabel('Number of timestamps ahead', fontsize=12)
 plt.ylabel('MSE', fontsize=12)
 plt.title('Average MSE of multiple validation jobs.', fontsize=12)
 plt.xticks(x_indexes, x)
 plt.legend(fontsize=9.7)
-plt.savefig('MSE_univar.png')
+plt.savefig('RF_depth.png')
 plt.close()
