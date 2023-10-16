@@ -79,10 +79,9 @@ def plot_scaling_methods(data):
 
 
 def plot_results_after(data):
-    df_trainnorm=data.copy()
-    df_trainnorm = normalize_data_minMax(df_trainnorm)
+    df_trainnorm = normalize_data_minMax( data.copy())
 
-    df_trainsavg=df_trainnorm.copy().apply(lambda x: savgol_filter(x, 51, 4))
+    df_trainsavg = df_trainnorm.copy().apply(lambda x: savgol_filter(x, 51, 4))
     z_scores = (df_trainnorm.copy() - np.mean(df_trainnorm.copy())) / np.std(df_trainnorm.copy())
     threshold = 3
 
@@ -95,62 +94,25 @@ def plot_results_after(data):
     clean_data = df_trainnorm.copy()[~noise]
 
     fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(16, 10))
-    axs[0].plot(index,df_trainnorm["mean_CPU_usage"])
+    axs[0].plot(index, df_trainnorm["mean_CPU_usage"])
     axs[0].set_title('Normalised data', fontsize=20)
     axs[0].set_xlabel('Time (days)', fontsize=18)
     axs[0].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
-    axs[1].plot(index,df_trainsavg["mean_CPU_usage"])
+    axs[1].plot(index, df_trainsavg["mean_CPU_usage"])
     axs[1].set_title('Savitzky-Golay filter', fontsize=20)
     axs[1].set_xlabel('Time (days)', fontsize=18)
     axs[1].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
-    axs[2].plot(index,clean_data["mean_CPU_usage"])
-    axs[2].set_title('Noise removed',fontsize=20)
+    axs[2].plot(index, clean_data["mean_CPU_usage"])
+    axs[2].set_title('Noise removed', fontsize=20)
     axs[2].set_xlabel('Time (days)', fontsize=18)
     axs[2].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
     fig.suptitle('Operations after normalisation', fontsize=20)
     plt.savefig('operations_after.png')
     plt.show()
-#
-# def plot_results_before(data):
-#     df_trainnorm=data.copy()
-#     df_trainnorm = normalize_data_minMax(df_trainnorm)
-#
-#     df_trainsavg=data.copy().apply(lambda x: savgol_filter(x, 51, 4))
-#     df_trainsavg = normalize_data_minMax(df_trainsavg)
-#     z_scores = (data.copy() - np.mean(data.copy())) / np.std(data.copy())
-#     threshold = 3
-#     # Identify the noise using the Z-score method
-#     noise = np.abs(z_scores) > threshold
-#     in_seconds = 1000000
-#     in_minutes = in_seconds * 60
-#     in_hours = in_minutes * 60
-#     in_days = in_hours * 24
-#     index = (data["start_time"] - 600000000) / in_days
-#     # Remove the noise from the data set
-#     clean_data = data.copy()[~noise]
-#     clean_data = normalize_data_minMax(clean_data)
-#
-#     fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(16, 10))
-#     axs[0].plot(index,df_trainnorm["mean_CPU_usage"])
-#     axs[0].set_title('Normalized data', fontsize=20)
-#     axs[0].set_xlabel('Time (days)', fontsize=18)
-#     axs[0].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
-#     axs[1].plot(index,df_trainsavg["mean_CPU_usage"])
-#     axs[1].set_title('Savitzky-Golay filter', fontsize=20)
-#     axs[1].set_xlabel('Time (days)', fontsize=18)
-#     axs[1].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
-#     axs[2].plot(index,clean_data["mean_CPU_usage"])
-#     axs[2].set_title('Noise removed', fontsize=20)
-#     axs[2].set_xlabel('Time (days)', fontsize=18)
-#     axs[2].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
-#     fig.suptitle('Operations before normalization', fontsize=20)
-#     plt.savefig('operations_before.png')
-#     plt.show()
 
 
-def plot_results(data):
-    df_trainnorm=data.copy()
-    df_trainnorm = normalize_data_minMax(df_trainnorm)
+#
+def plot_results_before(data):
 
     df_trainsavg=data.copy().apply(lambda x: savgol_filter(x, 51, 4))
     df_trainsavg = normalize_data_minMax(df_trainsavg)
@@ -166,10 +128,11 @@ def plot_results(data):
     # Remove the noise from the data set
     clean_data = data.copy()[~noise]
     clean_data = normalize_data_minMax(clean_data)
+    df_trainnorm = normalize_data_minMax(data.copy())
 
-    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(18, 10))
+    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(16, 10))
     axs[0].plot(index,df_trainnorm["mean_CPU_usage"])
-    axs[0].set_title('Normalised data', fontsize=20)
+    axs[0].set_title('Normalized data', fontsize=20)
     axs[0].set_xlabel('Time (days)', fontsize=18)
     axs[0].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
     axs[1].plot(index,df_trainsavg["mean_CPU_usage"])
@@ -180,8 +143,49 @@ def plot_results(data):
     axs[2].set_title('Noise removed', fontsize=20)
     axs[2].set_xlabel('Time (days)', fontsize=18)
     axs[2].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
+    fig.suptitle('Operations before normalization', fontsize=20)
+    plt.savefig('operations_before.png')
+    plt.show()
+
+
+def plot_results(data):
+    df_trainnorm = data.copy()
+    df_trainnorm = normalize_data_minMax(df_trainnorm)
+
+    df_trainsavg = data.copy().apply(lambda x: savgol_filter(x, 51, 4))
+    df_trainsavg = normalize_data_minMax(df_trainsavg)
+    z_scores = (data.copy() - np.mean(data.copy())) / np.std(data.copy())
+    threshold = 3
+    # Identify the noise using the Z-score method
+    noise = np.abs(z_scores) > threshold
+    in_seconds = 1000000
+    in_minutes = in_seconds * 60
+    in_hours = in_minutes * 60
+    in_days = in_hours * 24
+    index = (data["start_time"] - 600000000) / in_days
+    # Remove the noise from the data set
+    clean_data = data.copy()[~noise]
+    clean_data = normalize_data_minMax(clean_data)
+
+    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(18, 10))
+    axs[0].plot(index, df_trainnorm["mean_CPU_usage"])
+    axs[0].set_title('Normalised data', fontsize=20)
+    axs[0].set_xlabel('Time (days)', fontsize=18)
+    axs[0].set_ylim(0, 1.1)
+    axs[1].set_ylim(0, 1.1)
+    axs[2].set_ylim(0, 1.1)
+    axs[0].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
+    axs[1].plot(index, df_trainsavg["mean_CPU_usage"])
+    axs[1].set_title('Savitzky-Golay filter', fontsize=20)
+    axs[1].set_xlabel('Time (days)', fontsize=18)
+    axs[1].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
+    axs[2].plot(index, clean_data["mean_CPU_usage"])
+    axs[2].set_title('Noise removed', fontsize=20)
+    axs[2].set_xlabel('Time (days)', fontsize=18)
+    axs[2].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
     plt.savefig('operations.png')
     plt.show()
+
 
 def read_data(path='../training'):
     filepaths = [path + "/" + f for f in os.listdir(path) if f.endswith('.csv')]
@@ -196,8 +200,7 @@ def main():
     plot_scaling_methods(data)
     plot_results_after(data)
     plot_results(data)
-
-
+    plot_results_before(data)
 
 if __name__ == "__main__":
     main()
