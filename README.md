@@ -26,8 +26,15 @@ file_list = os.listdir( "./sortedGroupedJobFiles")
 file_list.sort()  
 
 num_files = len(file_list)
-train_test_cut = int(0.8 * num_files)
 
-train_files = file_list[:train_test_cut]
-test_files = file_list[train_test_cut:]
+train_ratio = 0.6
+test_ratio = 0.2
+validation_ratio = 0.2
+
+train_index = int(train_ratio * num_files)
+test_index = train_index + int(test_ratio * num_files)
+
+train_files = file_list[:train_index]
+validation_files = file_list[train_index:test_index]
+test_files = file_list[test_index:]
 ```
