@@ -88,23 +88,17 @@ def plot_results(t, sequence_length, df, actual_values_cpu, predictions_cpu, tar
 def create_sliding_window(t, sequence_length, x_data, y_data):
     X = []
     y = []
-    for i in range(0, len(x_data) - t + 1):
-        if  i < sequence_length - 1:
-            padding = x_data.values[0].repeat(sequence_length - i - 1, 1)
-            x = x_data.values[0:(i + 1), :]
-            x = torch.cat((padding, x), 0)
-            X.append(x)
-            y.append(y_data.values[i:i + t])
-        else:
-            X.append(x_data.values[i - sequence_length:i])
-            y.append(y_data.values[i:i + t])
+    for i in range(sequence_length, len(x_data) - t + 1):
+        X.append(x_data.values[i - sequence_length:i])
+        y.append(y_data.values[i:i + t])
     X = np.array(X)
     y = np.array(y)
     return X, y
 
 
 def read_file_names(file_path, path, index_start, index_end):
-    dir = "~/Documents/pythonScripts/new/" + path + "/"
+
+    dir = "~/Documents/pythonScripts/" + path + "/"
     expanded_path = os.path.expanduser(dir)
     g0 = os.listdir(expanded_path)
     g0 = g0[index_start: index_end]
@@ -113,6 +107,15 @@ def read_file_names(file_path, path, index_start, index_end):
     append_to_file(file_path, str(g0))
     return g0_files
 
+
+def read_file_names_test(path, nr_0):
+    dir = "~/Documents/pythonScripts/" + path
+    expanded_path = os.path.expanduser(dir)
+    g0 = os.listdir(expanded_path)
+    g0 = g0[:nr_0]
+    g0_files = [expanded_path + filename for filename in g0]
+
+    return g0_files
 
 
 def read_files(training_files, t, sequence_length, features, target):
@@ -137,20 +140,17 @@ def predict(test_files, t, sequence_length, features, target, start_time,
             training_time, dir, regressor):
     test_files_csv_x, test_files_csv_y = read_files(test_files, t, sequence_length, features, target)
 
-    test_files_csv_x_reshaped = [np.reshape(arr, (-1, sequence_length)).tolist() for arr in test_files_csv_x]
+    test_files_csv_x_reshaped = [np.reshape(arr, (-1, 1)).tolist() for arr in test_files_csv_x]
     y_predictions = list()
     for test_files_csv_x in test_files_csv_x_reshaped:
         y_prediction = regressor.predict(test_files_csv_x)
         y_predictions.append(y_prediction)
 
-    calculate_prediction_results(t, y_predictions, test_files_csv_y, "rf_"+dir+"_.txt", start_time,
+    calculate_prediction_results(t, y_predictions, test_files_csv_y, "rf_" + dir + "_.txt", start_time,
                                  training_time)
 
 
 def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_usage", trees=200, max_depth=3):
-    random_seed = 28
-    np.random.seed(random_seed)
-
     file_path = 'rf.txt'
     start_time = time.time()
     append_to_file(file_path, "t=" + str(t) + ", sequence length=" + str(sequence_length))
@@ -159,21 +159,17 @@ def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_us
     validation_files = read_file_names(file_path, "0", 50, 100)
     test_files = read_file_names(file_path, "1", 0, 50)
 
-
     training_files_csv_x, training_files_csv_y = read_files(training_files, t, sequence_length, features, target)
-    regressor = RandomForestRegressor(n_estimators=trees, max_depth=max_depth, random_state=random_seed)
 
-    # reshaped_training_files = [np.reshape(arr, (-1, 1)) for arr in training_files_csv_x]
-    # stacked_inputs = np.vstack(reshaped_training_files)
+    regressor = RandomForestRegressor(n_estimators=trees, max_depth=max_depth, random_state=0)
 
-    training_files_csv_x = np.concatenate(training_files_csv_x, axis=0)  # Flatten the nested arrays
-    training_files_csv_x = np.reshape(training_files_csv_x, (-1, sequence_length))  # Reshape to have 6 elements per inner array
-
+    reshaped_training_files = [np.reshape(arr, (-1, 1)) for arr in training_files_csv_x]
+    stacked_inputs = np.vstack(reshaped_training_files)
     training_files_csv_y = np.concatenate(training_files_csv_y, axis=0)  # Flatten the nested arrays
-    training_files_csv_y = np.reshape(training_files_csv_y, (-1, t))  # Reshape to have 6 elements per inner array
-    regressor.fit(training_files_csv_x, training_files_csv_y)
+    training_files_csv_y = np.reshape(training_files_csv_y, (-1, 6))  # Reshape to have 6 elements per inner array
+    regressor.fit(stacked_inputs, training_files_csv_y)
 
-    #[[x1],[x2],[x3],..] [[y11,y12,y13,y14,y15,y16],[y21,y22,y23,y24,y25,y26]...]
+    # [[x1],[x2],[x3],..] [[y11,y12,y13,y14,y15,y16],[y21,y22,y23,y24,y25,y26]...]
 
     print("DONE")
     joblib.dump(regressor, 'random_forest_' + str(sequence_length) + '_sequence_length_' + str(t) + '_max_depth_' + str(
@@ -188,4 +184,4 @@ def main(t=2, sequence_length=12, target="mean_CPU_usage", features="mean_CPU_us
 
 
 if __name__ == "__main__":
-    main(6, 6, ['mean_CPU_usage'], ['mean_CPU_usage'], 200, 6)
+    main(6, 1, ['mean_CPU_usage'], ['mean_CPU_usage'], 200, 4)
