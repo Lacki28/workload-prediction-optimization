@@ -41,7 +41,7 @@ class SequenceDataset(Dataset):
             padding = self.X[0].repeat(self.sequence_length - i - 1, 1)
             x = self.X[0:(i + 1), :]
             x = torch.cat((padding, x), 0)
-        return x, self.y[i: i + self.t]  # return target n time stamps ahead
+        return x, self.y[i+1: i + self.t+1]  # return target n time stamps ahead
 
 class RegressionLSTM(nn.Module):
     def __init__(self, num_sensors, num_hidden_units, num_layers, t, dropout, lin_layers):

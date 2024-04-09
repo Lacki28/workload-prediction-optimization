@@ -95,9 +95,19 @@ def plot_results(t, predictions_cpu, predictions_mem, actual_values_cpu, actual_
 def create_sliding_window(t, sequence_length, x_data, y_data):
     X = []
     y = []
-    for i in range(sequence_length, len(x_data) - t + 1):
-        X.append(x_data.values[i - sequence_length:i])
-        y.append(y_data.values[i + t - 1])
+
+    for i in range(0, len(x_data) - sequence_length):
+        if i < sequence_length:
+            padding = np.tile(np.array([x_data.iloc[0]]), sequence_length - i - 1).flatten()
+            x_window = x_data.iloc[0:i + 1].values.flatten()
+            x_window = np.concatenate((padding, x_window), axis=0)
+        else:
+            x_window = x_data.iloc[i - sequence_length + 1:i + 1].values.flatten()
+
+        y_window = y_data.iloc[i + 1:i + t + 1].values.flatten()
+        X.append(x_window)
+        y.append(y_window)
+
     X = np.array(X)
     y = np.array(y)
     return X, y

@@ -91,23 +91,40 @@ def plot_results_after(data):
     in_hours = in_minutes * 60
     in_days = in_hours * 24
     index = (data["start_time"] - 600000000) / in_days
-    clean_data = df_trainnorm.copy()[~noise]
 
-    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(16, 10))
+    fig, axs = plt.subplots(nrows=1, ncols=4, figsize=(24, 10))
+    axs[0].set_ylim(0, 1.1)
+    axs[1].set_ylim(0, 1.1)
+    axs[2].set_ylim(0, 1.1)
+    axs[3].set_ylim(0, 1.1)
+    labelsize=14
+    axs[0].tick_params(axis='x', labelsize=labelsize)  # Set the x-axis tick label font size to 12
+    axs[0].tick_params(axis='y', labelsize=labelsize)  # Set the y-axis tick label font size to 12
+    axs[1].tick_params(axis='x', labelsize=labelsize)  # Set the x-axis tick label font size to 12
+    axs[1].tick_params(axis='y', labelsize=labelsize)  # Set the y-axis tick label font size to 12
+    axs[2].tick_params(axis='x', labelsize=labelsize)  # Set the x-axis tick label font size to 12
+    axs[2].tick_params(axis='y', labelsize=labelsize)  # Set the y-axis tick label font size to 12
+    axs[3].tick_params(axis='x', labelsize=labelsize)  # Set the x-axis tick label font size to 12
+    axs[3].tick_params(axis='y', labelsize=labelsize)  # Set the y-axis tick label font size to 12
+
     axs[0].plot(index, df_trainnorm["mean_CPU_usage"])
-    axs[0].set_title('Normalised data', fontsize=20)
+    axs[0].set_title('Normalized data', fontsize=20)
     axs[0].set_xlabel('Time (days)', fontsize=18)
-    axs[0].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
+    axs[0].set_ylabel('CPU usage (of job 1985957305)', fontsize=18)
     axs[1].plot(index, df_trainsavg["mean_CPU_usage"])
     axs[1].set_title('Savitzky-Golay filter', fontsize=20)
     axs[1].set_xlabel('Time (days)', fontsize=18)
-    axs[1].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
-    axs[2].plot(index, clean_data["mean_CPU_usage"])
-    axs[2].set_title('Noise removed', fontsize=20)
+    axs[1].set_ylabel('CPU usage (of job 1985957305)', fontsize=18)
+    axs[2].plot(index, df_trainnorm["canonical_mem_usage"])
+    axs[2].set_title('Normalized data', fontsize=20)
     axs[2].set_xlabel('Time (days)', fontsize=18)
-    axs[2].set_ylabel('CPU usage (of job 3418324)', fontsize=18)
-    fig.suptitle('Operations after normalisation', fontsize=20)
-    plt.savefig('operations_after.png')
+    axs[2].set_ylabel('Canonical memory usage (of job 1985957305)', fontsize=18)
+    axs[3].plot(index, df_trainsavg["canonical_mem_usage"])
+    axs[3].set_title('Noise removed', fontsize=20)
+    axs[3].set_xlabel('Time (days)', fontsize=18)
+    axs[3].set_ylabel('Canonical memory usage (of job 1985957305)', fontsize=18)
+    # fig.suptitle('Operations after normalisation', fontsize=20)
+    plt.savefig('comparison_mem_CPU_savgol.pdf')
     plt.show()
 
 
@@ -167,7 +184,7 @@ def plot_results(data):
     clean_data = data.copy()[~noise]
     clean_data = normalize_data_minMax(clean_data)
 
-    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(18, 10))
+    fig, axs = plt.subplots(nrows=1, ncols=4, figsize=(18, 10))
     axs[0].plot(index, df_trainnorm["mean_CPU_usage"])
     axs[0].set_title('Normalised data', fontsize=20)
     axs[0].set_xlabel('Time (days)', fontsize=18)
@@ -195,12 +212,79 @@ def read_data(path='../training'):
     return df_list
 
 
+
+def plot_results_after2(data):
+    df_trainnorm = normalize_data_minMax(data.copy())
+
+    df_trainsavg = df_trainnorm.copy().apply(lambda x: savgol_filter(x, 51, 4))
+    z_scores = (df_trainnorm.copy() - np.mean(df_trainnorm.copy())) / np.std(df_trainnorm.copy())
+    threshold = 3
+    labelsize=18
+    othersize=20
+    noise = np.abs(z_scores) > threshold
+    in_seconds = 1000000
+    in_minutes = in_seconds * 60
+    in_hours = in_minutes * 60
+    in_days = in_hours * 24
+    index = (data["start_time"] - 600000000) / in_days
+
+    # Plot 1
+    fig, axs = plt.subplots(figsize=(12, 7))
+    axs.set_ylim(0, 1.1)
+    axs.tick_params(axis='x', labelsize=labelsize)
+    axs.tick_params(axis='y', labelsize=labelsize)
+    axs.plot(index, df_trainnorm["mean_CPU_usage"])
+    axs.set_title('Normalized data', fontsize=othersize)
+    axs.set_xlabel('Time (days)', fontsize=othersize)
+    axs.set_ylabel('CPU usage (of job 1985957305)', fontsize=othersize)
+    plt.savefig('normalised_data_plot.pdf')
+    plt.show()
+
+    # Plot 2
+    fig, axs = plt.subplots(figsize=(12, 7))
+    axs.set_ylim(0, 1.1)
+    axs.tick_params(axis='x', labelsize=labelsize)
+    axs.tick_params(axis='y', labelsize=labelsize)
+    axs.plot(index, df_trainsavg["mean_CPU_usage"])
+    axs.set_title('Savitzky-Golay filter', fontsize=othersize)
+    axs.set_xlabel('Time (days)', fontsize=othersize)
+    axs.set_ylabel('CPU usage (of job 1985957305)', fontsize=othersize)
+    plt.savefig('savgol_filter_plot.pdf')
+    plt.show()
+
+    # Plot 3
+    fig, axs = plt.subplots(figsize=(12, 7))
+    axs.set_ylim(0, 1.1)
+    axs.tick_params(axis='x', labelsize=labelsize)
+    axs.tick_params(axis='y', labelsize=labelsize)
+    axs.plot(index, df_trainnorm["canonical_mem_usage"])
+    axs.set_title('Normalized data', fontsize=othersize)
+    axs.set_xlabel('Time (days)', fontsize=othersize)
+    axs.set_ylabel('Canonical memory usage (of job 1985957305)', fontsize=othersize)
+    plt.savefig('normalised_data_mem_plot.pdf')
+    plt.show()
+
+    # Plot 4
+    fig, axs = plt.subplots(figsize=(12, 7))
+    axs.set_ylim(0, 1.1)
+    axs.tick_params(axis='x', labelsize=labelsize)
+    axs.tick_params(axis='y', labelsize=labelsize)
+    axs.plot(index, df_trainsavg["canonical_mem_usage"])
+    axs.set_title('Noise removed', fontsize=othersize)
+    axs.set_xlabel('Time (days)', fontsize=othersize)
+    axs.set_ylabel('Canonical memory usage (of job 1985957305)', fontsize=othersize)
+    plt.savefig('noise_removed_mem_plot.pdf')
+    plt.show()
+
+# Call the function with your data
+# plot_results_after(your_data)
+
 def main():
-    data = pd.read_csv("../../sortedGroupedJobFiles/3418324.csv", ",")
-    plot_scaling_methods(data)
-    plot_results_after(data)
-    plot_results(data)
-    plot_results_before(data)
+    data = pd.read_csv("../../sortedGroupedJobFiles/1985957305.csv", ",") #1985957305
+    # plot_scaling_methods(data)
+    plot_results_after2(data)
+    # plot_results(data)
+    # plot_results_before(data)
 
 if __name__ == "__main__":
     main()
